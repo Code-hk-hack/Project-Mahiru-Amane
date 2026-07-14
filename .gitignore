@@ -1,0 +1,10 @@
+node_modules/
+.venv/
+__pycache__/
+.env
+.next/
+dist/
+*.log
+.DS_Store
+graph.json
+graph.html
