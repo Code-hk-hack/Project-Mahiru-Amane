@@ -91,13 +91,16 @@ export default function Home() {
       {/* Character Sprite Placeholder */}
       <div className="character-display">
         <motion.div 
-          ref={characterRef}
-          className="character-sprite"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
         >
-          {/* Add actual sprite image here later */}
+          <div 
+            ref={characterRef}
+            className="character-sprite"
+          >
+            {/* Add actual sprite image here later */}
+          </div>
         </motion.div>
       </div>
 
