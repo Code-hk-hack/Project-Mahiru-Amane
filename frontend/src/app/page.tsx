@@ -2,7 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import anime from "animejs";
+import * as animeModule from "animejs";
+
+// @ts-ignore - Handle various anime.js export shapes
+const anime = animeModule.default || animeModule;
 
 interface AnalystFeedback {
   passiveness_score: number;
