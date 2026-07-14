@@ -158,7 +158,7 @@ export default function Home() {
           
           <div className="metric-row">
             <span>Passiveness</span>
-            <span style={{ color: latestFeedback?.passiveness_score > 5 ? 'var(--accent-color)' : 'white' }}>
+            <span style={{ color: (latestFeedback?.passiveness_score || 0) > 5 ? 'var(--accent-color)' : 'white' }}>
               {latestFeedback ? latestFeedback.passiveness_score : 0}/10
             </span>
           </div>
