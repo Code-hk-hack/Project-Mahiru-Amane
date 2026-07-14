@@ -1,11 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import * as animeModule from "animejs";
-
-// @ts-expect-error - Handle various anime.js export shapes
-const anime = animeModule.default || animeModule;
 
 interface AnalystFeedback {
   passiveness_score: number;
@@ -24,22 +20,7 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Reference for anime.js character animation
-  const characterRef = useRef(null);
-
-  useEffect(() => {
-    if (characterRef.current) {
-      anime({
-        targets: characterRef.current,
-        translateY: [10, -10],
-        direction: 'alternate',
-        loop: true,
-        easing: 'easeInOutSine',
-        duration: 2000
-      });
-    }
-  }, []);
+  const [isPulsing, setIsPulsing] = useState(false);
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -64,15 +45,9 @@ export default function Home() {
         feedback: data.feedback
       }]);
       
-      // Pulse animation on new message
-      if (characterRef.current) {
-        anime({
-          targets: characterRef.current,
-          scale: [1, 1.02, 1],
-          duration: 500,
-          easing: 'easeOutElastic(1, .8)'
-        });
-      }
+      // Trigger pulse animation
+      setIsPulsing(true);
+      setTimeout(() => setIsPulsing(false), 500);
       
     } catch (err) {
       console.error(err);
@@ -95,12 +70,19 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1 }}
         >
-          <div 
-            ref={characterRef}
+          <motion.div 
             className="character-sprite"
+            animate={{ 
+              y: [10, -10, 10],
+              scale: isPulsing ? [1, 1.05, 1] : 1
+            }}
+            transition={{ 
+              y: { repeat: Infinity, duration: 4, ease: "easeInOut" },
+              scale: { duration: 0.5 }
+            }}
           >
             {/* Add actual sprite image here later */}
-          </div>
+          </motion.div>
         </motion.div>
       </div>
 
