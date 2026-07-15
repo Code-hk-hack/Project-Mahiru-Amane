@@ -73,16 +73,7 @@ export default function LandingPage() {
         transition={{ delay: 0.3, duration: 1.2, ease: "easeOut" }}
         className="mt-24 md:mt-32 flex flex-col items-center text-center max-w-4xl px-6 z-10"
       >
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.8, duration: 1 }}
-          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[var(--primary-color)]/30 bg-white/50 text-xs font-semibold text-[var(--primary-color)] mb-8 shadow-sm backdrop-blur-sm"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Active Coaching Enabled</span>
-        </motion.div>
-        
+
         <h1 className="text-5xl md:text-7xl font-[family-name:var(--font-playfair)] font-bold tracking-tight leading-[1.1] mb-8 text-[var(--text-primary)]">
           Find your <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary-color)] to-[var(--secondary-color)]">confidence.</span><br />
           Speak with clarity.
