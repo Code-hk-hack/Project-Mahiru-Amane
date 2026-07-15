@@ -3,10 +3,7 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Meteors } from "@/components/ui/MeteorEffect";
-import { CardSpotlight } from "@/components/ui/CardSpotlight";
-import { TextGenerateEffect } from "@/components/ui/TextGenerateEffect";
-import { Activity, TrendingUp, AlertCircle } from "lucide-react";
+import { Activity, TrendingUp, AlertCircle, ArrowLeft } from "lucide-react";
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
@@ -19,101 +16,108 @@ export default function DashboardPage() {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.1 }
+      transition: { staggerChildren: 0.05 }
     }
   };
 
-  const itemVariants: any = {
-    hidden: { opacity: 0, y: 20 },
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
     show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
   };
 
   return (
-    <div className="min-h-screen flex flex-col p-8 md:p-16 relative overflow-x-hidden overflow-y-auto bg-[#0d0d18] text-white">
-      {/* Meteor Background */}
-      <div className="absolute inset-0 z-0">
-        <Meteors number={30} />
-      </div>
+    <div className="min-h-screen flex flex-col bg-[#000000] text-[#EDEDED] font-sans selection:bg-white/30">
+      
+      {/* Top Border / Progress Line */}
+      <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
       {/* Navigation */}
-      <motion.nav 
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="flex gap-10 bg-white/5 px-10 py-4 rounded-full border border-white/10 backdrop-blur-xl z-10 shadow-2xl items-center mb-16 w-fit mx-auto"
-      >
-        <div className="font-[family-name:JetBrains_Mono] font-extrabold text-[var(--primary-color)] mr-8 text-xl tracking-wider">PROJECT MAHIRU</div>
-        <Link href="/" className="text-white/80 hover:text-white font-semibold transition-colors">Home</Link>
-        <Link href="/training" className="text-[var(--secondary-color)] hover:text-cyan-300 font-semibold transition-colors">Start Training</Link>
-      </motion.nav>
+      <nav className="flex items-center justify-between px-8 py-6 border-b border-white/10">
+        <div className="flex items-center gap-6">
+          <Link href="/" className="text-[#A0A0A0] hover:text-white transition-colors flex items-center gap-2 text-sm font-medium">
+            <ArrowLeft className="w-4 h-4" />
+            Overview
+          </Link>
+          <div className="h-4 w-px bg-white/20" />
+          <h1 className="font-semibold text-white tracking-tight">Analytics Dashboard</h1>
+        </div>
+        <div className="flex gap-4">
+          <Link href="/training">
+            <button className="bg-white text-black px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors">
+              New Session
+            </button>
+          </Link>
+        </div>
+      </nav>
 
       {/* Main Content */}
-      <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="z-10 w-full max-w-6xl mx-auto"
-      >
-        <div className="text-4xl mb-12 font-[family-name:JetBrains_Mono] font-bold">
-          <TextGenerateEffect words="Performance Analytics" className="text-[var(--secondary-color)] drop-shadow-lg" />
-        </div>
+      <div className="flex-1 overflow-x-hidden overflow-y-auto p-8 md:p-12">
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="w-full max-w-6xl mx-auto space-y-8"
+        >
 
-        {/* Top Metric Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          {[
-            { label: "Avg. Passiveness Score", value: "3.2", highlight: "var(--primary-color)", icon: <Activity />, trend: "-15% (Improving)" },
-            { label: "Total Apologies", value: "14", highlight: "var(--secondary-color)", icon: <AlertCircle />, trend: "4 this week" },
-            { label: "Hesitation Markers", value: "89", highlight: "var(--tertiary-color)", icon: <TrendingUp />, trend: "Mostly 'I guess'" }
-          ].map((metric, idx) => (
-            <motion.div key={idx} variants={itemVariants}>
-              <CardSpotlight className="h-full group">
-                <div className="absolute top-0 left-0 w-1 h-full transition-all duration-300 group-hover:w-2" style={{ background: metric.highlight }} />
-                
-                <div className="flex justify-between items-start mb-4">
-                  <div className="font-[family-name:JetBrains_Mono] text-sm text-gray-400 uppercase tracking-widest">
+          {/* Top Metric Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { label: "Avg. Passiveness Score", value: "3.2", icon: <Activity className="w-4 h-4" />, trend: "-15% (Improving)", positive: true },
+              { label: "Total Apologies", value: "14", icon: <AlertCircle className="w-4 h-4" />, trend: "4 this week", positive: false },
+              { label: "Hesitation Markers", value: "89", icon: <TrendingUp className="w-4 h-4" />, trend: "Mostly 'I guess'", positive: false }
+            ].map((metric, idx) => (
+              <motion.div key={idx} variants={itemVariants} className="bg-[#0A0A0A] border border-white/10 rounded-lg p-6 hover:border-white/20 transition-colors">
+                <div className="flex justify-between items-center mb-4 text-[#A0A0A0]">
+                  <div className="text-xs font-semibold uppercase tracking-wider">
                     {metric.label}
                   </div>
-                  <div className="text-gray-500">{metric.icon}</div>
+                  <div>{metric.icon}</div>
                 </div>
                 
-                <div className="text-6xl font-extrabold text-white mb-4 drop-shadow-md">
+                <div className="text-4xl font-semibold text-white mb-2 tracking-tight">
                   {metric.value}
                 </div>
-                <div className="font-bold text-sm" style={{ color: metric.highlight }}>
+                <div className={`text-xs font-medium ${metric.positive ? 'text-green-500' : 'text-gray-400'}`}>
                   {metric.trend}
                 </div>
-              </CardSpotlight>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Main Chart Area */}
-        <motion.div variants={itemVariants}>
-          <CardSpotlight className="mb-16 p-10">
-            <h2 className="font-[family-name:JetBrains_Mono] text-xl mb-10 text-gray-400">Passiveness Score Over Time</h2>
-            
-            <div className="h-[300px] flex items-end gap-4 pb-8 border-b border-white/10">
-            {[8, 7, 9, 6, 5, 5, 4, 3, 2, 3, 1, 2].map((val, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
-                <motion.div 
-                  initial={{ height: 0, filter: "hue-rotate(0deg)" }}
-                  animate={{ height: mounted ? `${val * 10}%` : 0, filter: "hue-rotate(360deg)" }}
-                  transition={{ 
-                    height: { duration: 1.5, type: "spring", bounce: 0.5, delay: 0.5 + (i * 0.1) },
-                    filter: { duration: 8, repeat: Infinity, ease: "linear" }
-                  }}
-                  className="w-full rounded-t-lg bg-gradient-to-t from-[var(--primary-color)] to-[var(--secondary-color)] opacity-90 hover:opacity-100 transition-opacity cursor-pointer shadow-[0_0_30px_rgba(0,224,255,0.4)]"
-                />
-              </div>
+              </motion.div>
             ))}
           </div>
-          <div className="flex justify-between mt-6 text-gray-400 font-[family-name:JetBrains_Mono] text-sm tracking-widest">
-            <span>Session 1</span>
-            <span>Session 6</span>
-            <span>Session 12 (Current)</span>
-          </div>
-          </CardSpotlight>
+
+          {/* Main Chart Area */}
+          <motion.div variants={itemVariants} className="bg-[#0A0A0A] border border-white/10 rounded-lg p-8">
+            <div className="flex justify-between items-end mb-8">
+              <div>
+                <h2 className="text-sm font-semibold text-white mb-1">Passiveness Score Over Time</h2>
+                <p className="text-xs text-[#A0A0A0]">Lower score indicates more confident language usage.</p>
+              </div>
+            </div>
+            
+            <div className="h-[250px] flex items-end gap-2 sm:gap-4 pb-4 border-b border-white/10">
+              {[8, 7, 9, 6, 5, 5, 4, 3, 2, 3, 1, 2].map((val, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                  {/* Tooltip on hover */}
+                  <div className="opacity-0 group-hover:opacity-100 absolute -top-8 bg-white text-black text-xs font-bold px-2 py-1 rounded transition-opacity pointer-events-none">
+                    {val.toFixed(1)}
+                  </div>
+                  <motion.div 
+                    initial={{ height: 0 }}
+                    animate={{ height: mounted ? `${val * 10}%` : 0 }}
+                    transition={{ duration: 1, type: "spring", bounce: 0.2, delay: 0.1 + (i * 0.05) }}
+                    className="w-full bg-white/20 group-hover:bg-white transition-colors rounded-t-sm"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between mt-4 text-[#A0A0A0] text-xs font-medium">
+              <span>Session 1</span>
+              <span>Session 6</span>
+              <span>Session 12 (Current)</span>
+            </div>
+          </motion.div>
+
         </motion.div>
-      </motion.div>
+      </div>
     </div>
   );
 }

@@ -5,24 +5,24 @@
 @tailwind utilities;
 
 :root {
-  /* StitchMCP Color Palette */
-  --surface-lowest: #0d0d18;
-  --surface-low: #1b1a26;
-  --surface: #12121d;
-  --primary-color: #bd00ff; /* Electric Violet */
-  --secondary-color: #00e0ff; /* Cyan Glitch */
-  --tertiary-color: #ff007a; /* Neon Pink */
-  --text-primary: #e3e0f1;
-  --text-secondary: #9d8ba0;
+  /* Linear/Vercel Enterprise Palette */
+  --surface-lowest: #000000;
+  --surface-low: #0A0A0A;
+  --surface: #111111;
+  --primary-color: #FFFFFF; 
+  --secondary-color: #888888; 
+  --tertiary-color: #333333; 
+  --text-primary: #EDEDED;
+  --text-secondary: #A0A0A0;
   
   /* Glassmorphism */
-  --glass-bg: rgba(20, 20, 35, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-blur: blur(20px);
+  --glass-bg: rgba(10, 10, 10, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: blur(12px);
   
   /* Character Mapping */
-  --mahiru-color: var(--tertiary-color);
-  --amane-color: var(--secondary-color);
+  --mahiru-color: #FFFFFF;
+  --amane-color: #888888;
 }
 
 * {
@@ -32,15 +32,14 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-geist-sans), 'Inter', sans-serif;
   color: var(--text-primary);
   background: var(--surface-lowest);
-  /* Cyberpunk nocturnal subtle grid */
-  background-image: linear-gradient(rgba(13, 13, 24, 0.8), rgba(13, 13, 24, 0.95)), 
-                    url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiLz4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMiIgZmlsbD0icmdiYSg4MiwgMCwgMTEzLCAwLjE1KSIvPgo8L3N2Zz4=');
+  /* Brutalist Subtle Grid */
+  background-image: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.95)), 
+                    url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiLz4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsIDI1NSwgMjU1LCAwLjA1KSIvPgo8L3N2Zz4=');
   background-size: 40px 40px;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
 }
 
 .vn-container {
