@@ -1,7 +1,17 @@
 -- Project Mahiru/Amane Database Schema
 
+-- Enable vector extension for LangChain RAG Memory
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- 0. Knowledge Base (HR Rubrics)
+CREATE TABLE IF NOT EXISTS hr_rubrics (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    content TEXT NOT NULL,
+    metadata JSONB,
+    embedding vector(384) -- Matches HuggingFace all-MiniLM-L6-v2 dimension
+);
 -- 1. Users Table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     username VARCHAR(255) UNIQUE NOT NULL,
@@ -12,7 +22,7 @@ CREATE TABLE users (
 );
 
 -- 2. Sessions Table
-CREATE TABLE sessions (
+CREATE TABLE IF NOT EXISTS sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -20,7 +30,7 @@ CREATE TABLE sessions (
 );
 
 -- 3. Messages Table
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -35,7 +45,7 @@ CREATE TABLE messages (
 );
 
 -- 4. Progression State (Long-term tracking)
-CREATE TABLE progression_state (
+CREATE TABLE IF NOT EXISTS progression_state (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     skill_category VARCHAR(100) NOT NULL, -- e.g., 'boundary_setting', 'cold_email'

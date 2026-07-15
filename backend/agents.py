@@ -1,20 +1,14 @@
 import os
 import json
-from groq import Groq
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Groq configuration (Lightning Fast Inference)
-api_key = os.environ.get("GROQ_API_KEY")
-
-client = Groq(
-    api_key=api_key or "MISSING_KEY",
-)
-
-# Using LLaMA 3.1 8B optimized for Groq LPUs
-MODEL = os.environ.get("MODEL_NAME", "llama-3.1-8b-instant") 
+# LangChain Imports
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 
 class AnalystFeedback(BaseModel):
     passiveness_score: int = Field(..., description="Score from 0 to 10 on how passive the user's language is.")
@@ -26,37 +20,40 @@ class AnalystAgent:
     @staticmethod
     def analyze(user_message: str) -> AnalystFeedback:
         """
-        Analyzes the user's message for passive language and boundary setting.
+        Analyzes the user's message for passive language and boundary setting using Gemini 1.5 Flash.
         """
-        # RAG (Retrieval-Augmented Generation) Integration
-        # Load HR rubrics to ground the AI in actual interview practices
+        # Load HR rubrics (In a full production RAG, this would use LangChain's SupabaseVectorStore)
         hr_knowledge = "{}"
         try:
-            with open("hr_knowledge_base.json", "r") as f:
+            with open("hr_knowledge_base.json", "r", encoding="utf-16") as f:
                 hr_knowledge = f.read()
         except Exception:
             pass
+
+        # Initialize Gemini via LangChain for heavy reasoning
+        gemini_api_key = os.environ.get("GEMINI_API_KEY")
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash", 
+            google_api_key=gemini_api_key,
+            temperature=0.2
+        )
+        
+        # Use LangChain's native Structured Output (much more reliable than raw JSON prompting)
+        structured_llm = llm.with_structured_output(AnalystFeedback)
 
         system_prompt = (
             "You are an Analyst Agent for a social confidence and interview training simulator. "
             "Your job is to evaluate the user's input for passiveness, excessive apologies, and hesitation. "
             f"Base your evaluation strictly on the following HR Interview Guidelines and Rubrics: {hr_knowledge}. "
-            "Return a strictly valid JSON object matching the requested schema. "
-            "JSON Format: {\"passiveness_score\": int, \"apology_count\": int, \"hesitation_count\": int, \"feedback_notes\": \"string\"}"
         )
         
-        completion = client.chat.completions.create(
-            model=MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
-            ],
-            response_format={"type": "json_object"}
-        )
+        # Call Gemini
+        result = structured_llm.invoke([
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_message)
+        ])
         
-        result_str = completion.choices[0].message.content
-        data = json.loads(result_str)
-        return AnalystFeedback(**data)
+        return result
 
 from mcp_client import get_mcp_session
 from database import get_db
@@ -75,15 +72,18 @@ def ensure_session_exists(db, session_id: str):
     except Exception as e:
         print(f"Error ensuring session exists: {e}")
 
+class CoachResponse(BaseModel):
+    response: str = Field(..., description="The spoken dialogue of the coach.")
+    emotion: str = Field(..., description="The emotion of the coach.")
+
 class CoachAgent:
     @staticmethod
     async def respond(user_message: str, analyst_feedback: AnalystFeedback, difficulty: str = "neutral", session_id: str = None, character: str = "mahiru") -> tuple[str, str]:
         """
-        Generates the Mahiru/Amane response incorporating the analyst feedback, executing tools, and using conversation history.
+        Generates the Mahiru/Amane response incorporating the analyst feedback using Groq via LangChain.
         """
         db = get_db()
         
-        # Ensure session exists if we have a session_id
         if session_id and session_id != "default-session":
             ensure_session_exists(db, session_id)
             
@@ -114,9 +114,7 @@ CRITICAL INSTRUCTION: You MUST format your final response to the user as a valid
   "emotion": "{default_emotion}" // Must be one of: {emotions_list}
 }}
 """
-        messages = [
-            {"role": "system", "content": system_prompt}
-        ]
+        messages = [SystemMessage(content=system_prompt)]
         
         # Fetch conversation history from Supabase
         if session_id and session_id != "default-session":
@@ -124,25 +122,33 @@ CRITICAL INSTRUCTION: You MUST format your final response to the user as a valid
                 history_res = db.table('messages').select('*').eq('session_id', session_id).order('created_at').limit(20).execute()
                 for msg in history_res.data:
                     role = msg['role']
-                    # Map db roles to LLM roles
                     if role == 'user':
-                        messages.append({"role": "user", "content": msg['content']})
+                        messages.append(HumanMessage(content=msg['content']))
                     elif role == 'coach':
-                        messages.append({"role": "assistant", "content": msg['content']})
+                        messages.append(AIMessage(content=msg['content']))
             except Exception as e:
                 print(f"Failed to fetch history: {e}")
 
-        # Append the new user message
-        messages.append({"role": "user", "content": user_message})
+        messages.append(HumanMessage(content=user_message))
+
+        # Initialize Groq via LangChain for lightning-fast chat
+        groq_api_key = os.environ.get("GROQ_API_KEY")
+        MODEL = os.environ.get("MODEL_NAME", "llama-3.1-8b-instant")
+        
+        llm = ChatGroq(
+            model=MODEL,
+            api_key=groq_api_key,
+            temperature=0.7
+        )
 
         mcp_session = await get_mcp_session()
-        groq_tools = []
+        raw_tools = []
         
         if mcp_session:
             try:
                 mcp_tools = await mcp_session.list_tools()
                 for t in mcp_tools.tools:
-                    groq_tools.append({
+                    raw_tools.append({
                         "type": "function",
                         "function": {
                             "name": t.name,
@@ -153,29 +159,21 @@ CRITICAL INSTRUCTION: You MUST format your final response to the user as a valid
             except Exception as e:
                 print(f"Failed to fetch tools from Slashy MCP: {e}")
 
-        # Limit to 5 tool call iterations
-        for _ in range(5):
-            # Only pass tools argument if we actually have tools
-            kwargs = {}
-            if groq_tools:
-                kwargs["tools"] = groq_tools
-
-            completion = client.chat.completions.create(
-                model=MODEL,
-                messages=messages,
-                response_format={"type": "json_object"},
-                **kwargs
-            )
+        # Bind tools to LangChain LLM if available
+        if raw_tools:
+            llm = llm.bind_tools(raw_tools)
             
-            response_message = completion.choices[0].message
+        # We enforce JSON output format
+        llm = llm.bind(response_format={"type": "json_object"})
+
+        for _ in range(5):
+            response_message = llm.invoke(messages)
             messages.append(response_message)
             
             if not response_message.tool_calls:
                 final_response = response_message.content or "{}"
                 
-                # Parse JSON for response and emotion
                 try:
-                    # Strip markdown code blocks if the LLM wrapped it
                     cleaned_response = final_response.strip()
                     if cleaned_response.startswith("```json"):
                         cleaned_response = cleaned_response[7:]
@@ -195,7 +193,6 @@ CRITICAL INSTRUCTION: You MUST format your final response to the user as a valid
                 # Save to database
                 if session_id and session_id != "default-session":
                     try:
-                        # Save User Message
                         db.table('messages').insert({
                             "session_id": session_id,
                             "role": "user",
@@ -206,7 +203,6 @@ CRITICAL INSTRUCTION: You MUST format your final response to the user as a valid
                             "feedback_notes": analyst_feedback.feedback_notes
                         }).execute()
                         
-                        # Save Coach Response
                         db.table('messages').insert({
                             "session_id": session_id,
                             "role": "coach",
@@ -217,10 +213,11 @@ CRITICAL INSTRUCTION: You MUST format your final response to the user as a valid
 
                 return coach_text, emotion
             
-            # Execute tool calls
+            # Execute LangChain tool calls
             for tool_call in response_message.tool_calls:
-                tool_name = tool_call.function.name
-                tool_args = json.loads(tool_call.function.arguments)
+                tool_name = tool_call["name"]
+                tool_args = tool_call["args"]
+                tool_id = tool_call["id"]
                 
                 print(f"Executing tool {tool_name} with args {tool_args}...")
                 tool_result_text = "Tool failed."
@@ -234,11 +231,10 @@ CRITICAL INSTRUCTION: You MUST format your final response to the user as a valid
                         tool_result_text = f"Error executing tool: {e}"
                         print(tool_result_text)
                 
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "name": tool_name,
-                    "content": tool_result_text
-                })
+                messages.append(ToolMessage(
+                    tool_call_id=tool_id,
+                    name=tool_name,
+                    content=tool_result_text
+                ))
         
         return "I tried to fulfill your request but it took too many steps.", "sad"
