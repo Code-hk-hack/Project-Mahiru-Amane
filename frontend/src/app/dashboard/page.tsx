@@ -16,34 +16,34 @@ export default function DashboardPage() {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.05 }
+      transition: { staggerChildren: 0.1 }
     }
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    hidden: { opacity: 0, y: 15 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 200, damping: 20 } }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#000000] text-[#EDEDED] font-sans selection:bg-white/30">
+    <div className="min-h-screen flex flex-col bg-[var(--surface-lowest)] text-[var(--text-primary)] overflow-hidden selection:bg-[var(--primary-color)] selection:text-white">
       
-      {/* Top Border / Progress Line */}
-      <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      {/* Soft Top Gradient */}
+      <div className="w-full h-1 bg-gradient-to-r from-transparent via-[var(--primary-color)] to-transparent opacity-30" />
 
       {/* Navigation */}
-      <nav className="flex items-center justify-between px-8 py-6 border-b border-white/10">
+      <nav className="flex items-center justify-between px-8 py-6 border-b border-[var(--primary-color)]/10 bg-white/50 backdrop-blur-md z-10 relative">
         <div className="flex items-center gap-6">
-          <Link href="/" className="text-[#A0A0A0] hover:text-white transition-colors flex items-center gap-2 text-sm font-medium">
+          <Link href="/" className="text-[var(--text-secondary)] hover:text-[var(--primary-color)] transition-colors flex items-center gap-2 text-sm font-semibold">
             <ArrowLeft className="w-4 h-4" />
-            Overview
+            Return
           </Link>
-          <div className="h-4 w-px bg-white/20" />
-          <h1 className="font-semibold text-white tracking-tight">Analytics Dashboard</h1>
+          <div className="h-5 w-px bg-[var(--primary-color)]/20" />
+          <h1 className="font-[family-name:var(--font-playfair)] font-bold text-xl tracking-wide text-[var(--text-primary)]">Progress Analytics</h1>
         </div>
         <div className="flex gap-4">
           <Link href="/training">
-            <button className="bg-white text-black px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors">
+            <button className="bg-[var(--primary-color)] text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-[#B5952F] hover:shadow-[0_4px_15px_rgba(212,175,55,0.3)] transition-all duration-300">
               New Session
             </button>
           </Link>
@@ -56,28 +56,28 @@ export default function DashboardPage() {
           variants={containerVariants}
           initial="hidden"
           animate="show"
-          className="w-full max-w-6xl mx-auto space-y-8"
+          className="w-full max-w-6xl mx-auto space-y-10"
         >
 
           {/* Top Metric Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { label: "Avg. Passiveness Score", value: "3.2", icon: <Activity className="w-4 h-4" />, trend: "-15% (Improving)", positive: true },
-              { label: "Total Apologies", value: "14", icon: <AlertCircle className="w-4 h-4" />, trend: "4 this week", positive: false },
-              { label: "Hesitation Markers", value: "89", icon: <TrendingUp className="w-4 h-4" />, trend: "Mostly 'I guess'", positive: false }
+              { label: "Avg. Passiveness Score", value: "3.2", icon: <Activity className="w-5 h-5" />, trend: "-15% (Improving)", positive: true },
+              { label: "Total Apologies", value: "14", icon: <AlertCircle className="w-5 h-5" />, trend: "4 this week", positive: false },
+              { label: "Hesitation Markers", value: "89", icon: <TrendingUp className="w-5 h-5" />, trend: "Mostly 'I guess'", positive: false }
             ].map((metric, idx) => (
-              <motion.div key={idx} variants={itemVariants} className="bg-[#0A0A0A] border border-white/10 rounded-lg p-6 hover:border-white/20 transition-colors">
-                <div className="flex justify-between items-center mb-4 text-[#A0A0A0]">
-                  <div className="text-xs font-semibold uppercase tracking-wider">
+              <motion.div key={idx} variants={itemVariants} className="bg-white border border-[var(--primary-color)]/10 rounded-3xl p-8 shadow-sm hover:shadow-[0_8px_30px_rgba(212,175,55,0.08)] hover:border-[var(--primary-color)]/30 transition-all duration-500">
+                <div className="flex justify-between items-center mb-6 text-[var(--text-secondary)]">
+                  <div className="text-xs font-bold uppercase tracking-widest text-[var(--primary-color)]">
                     {metric.label}
                   </div>
-                  <div>{metric.icon}</div>
+                  <div className="bg-[var(--surface-lowest)] p-2 rounded-full border border-[var(--primary-color)]/20 text-[var(--primary-color)]">{metric.icon}</div>
                 </div>
                 
-                <div className="text-4xl font-semibold text-white mb-2 tracking-tight">
+                <div className="text-5xl font-bold font-[family-name:var(--font-playfair)] text-[var(--text-primary)] mb-3 tracking-tight">
                   {metric.value}
                 </div>
-                <div className={`text-xs font-medium ${metric.positive ? 'text-green-500' : 'text-gray-400'}`}>
+                <div className={`text-sm font-semibold ${metric.positive ? 'text-[#8DB596]' : 'text-[#D98A94]'}`}>
                   {metric.trend}
                 </div>
               </motion.div>
@@ -85,34 +85,37 @@ export default function DashboardPage() {
           </div>
 
           {/* Main Chart Area */}
-          <motion.div variants={itemVariants} className="bg-[#0A0A0A] border border-white/10 rounded-lg p-8">
-            <div className="flex justify-between items-end mb-8">
+          <motion.div variants={itemVariants} className="bg-white border border-[var(--primary-color)]/10 rounded-3xl p-10 shadow-sm relative overflow-hidden">
+            {/* Subtle floral/angelic background watermark (optional) */}
+            <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-[var(--primary-color)] opacity-5 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex justify-between items-end mb-12 relative z-10">
               <div>
-                <h2 className="text-sm font-semibold text-white mb-1">Passiveness Score Over Time</h2>
-                <p className="text-xs text-[#A0A0A0]">Lower score indicates more confident language usage.</p>
+                <h2 className="text-2xl font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)] mb-2">Confidence Score Timeline</h2>
+                <p className="text-sm text-[var(--text-secondary)]">A lower passiveness score reflects a stronger, clearer voice.</p>
               </div>
             </div>
             
-            <div className="h-[250px] flex items-end gap-2 sm:gap-4 pb-4 border-b border-white/10">
+            <div className="h-[280px] flex items-end gap-3 sm:gap-6 pb-6 border-b border-[var(--primary-color)]/20 relative z-10">
               {[8, 7, 9, 6, 5, 5, 4, 3, 2, 3, 1, 2].map((val, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center justify-end h-full group relative">
                   {/* Tooltip on hover */}
-                  <div className="opacity-0 group-hover:opacity-100 absolute -top-8 bg-white text-black text-xs font-bold px-2 py-1 rounded transition-opacity pointer-events-none">
-                    {val.toFixed(1)}
+                  <div className="opacity-0 group-hover:opacity-100 absolute -top-10 bg-[var(--text-primary)] text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg transition-opacity pointer-events-none whitespace-nowrap">
+                    Score: {val.toFixed(1)}
                   </div>
                   <motion.div 
                     initial={{ height: 0 }}
                     animate={{ height: mounted ? `${val * 10}%` : 0 }}
-                    transition={{ duration: 1, type: "spring", bounce: 0.2, delay: 0.1 + (i * 0.05) }}
-                    className="w-full bg-white/20 group-hover:bg-white transition-colors rounded-t-sm"
+                    transition={{ duration: 1.2, type: "spring", bounce: 0.3, delay: 0.2 + (i * 0.05) }}
+                    className="w-full bg-[var(--primary-color)]/20 group-hover:bg-[var(--primary-color)] group-hover:shadow-[0_0_15px_rgba(212,175,55,0.4)] transition-all duration-300 rounded-t-lg"
                   />
                 </div>
               ))}
             </div>
-            <div className="flex justify-between mt-4 text-[#A0A0A0] text-xs font-medium">
+            <div className="flex justify-between mt-6 text-[var(--text-secondary)] text-xs font-bold tracking-wider uppercase relative z-10">
               <span>Session 1</span>
               <span>Session 6</span>
-              <span>Session 12 (Current)</span>
+              <span className="text-[var(--primary-color)]">Session 12 (Current)</span>
             </div>
           </motion.div>
 

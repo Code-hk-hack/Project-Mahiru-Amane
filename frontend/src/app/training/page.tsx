@@ -46,6 +46,41 @@ const TypewriterText = ({ text, onComplete }: { text: string, onComplete?: () =>
   return <span>{displayedText}</span>;
 };
 
+// Continuous floating particles component
+const FloatingDust = () => {
+  const [particles, setParticles] = useState<Array<{ id: number; left: string; delay: string; duration: string; size: string }>>([]);
+
+  useEffect(() => {
+    const newParticles = Array.from({ length: 15 }).map((_, i) => ({
+      id: i,
+      left: `${Math.random() * 100}%`,
+      delay: `${Math.random() * 5}s`,
+      duration: `${10 + Math.random() * 15}s`,
+      size: `${Math.random() * 4 + 2}px`
+    }));
+    setParticles(newParticles);
+  }, []);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 mix-blend-overlay">
+      {particles.map((p) => (
+        <div
+          key={p.id}
+          className="absolute bottom-0 bg-[var(--primary-color)] rounded-full blur-[1px]"
+          style={{
+            left: p.left,
+            width: p.size,
+            height: p.size,
+            animation: `float ${p.duration} linear ${p.delay} infinite`,
+            opacity: 0,
+            boxShadow: `0 0 10px var(--primary-color)`
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 export default function TrainingPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -148,33 +183,34 @@ export default function TrainingPage() {
     : { role: "coach", content: "..." };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#000000] text-[#EDEDED] font-sans selection:bg-white/30">
+    <div className="min-h-screen flex flex-col bg-[var(--surface-lowest)] text-[var(--text-primary)] overflow-hidden selection:bg-[var(--primary-color)] selection:text-white relative">
       
+      <FloatingDust />
+
       {/* Top Border */}
-      <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      <div className="w-full h-[3px] bg-gradient-to-r from-transparent via-[var(--primary-color)] to-transparent opacity-40 z-20 relative" />
 
       {/* Navigation */}
-      <nav className="flex items-center justify-between px-8 py-6 border-b border-white/10 z-10 relative bg-[#000000]">
+      <nav className="flex items-center justify-between px-8 py-6 border-b border-[var(--primary-color)]/10 bg-white/60 backdrop-blur-md z-20 relative shadow-sm">
         <div className="flex items-center gap-6">
-          <Link href="/" className="text-[#A0A0A0] hover:text-white transition-colors flex items-center gap-2 text-sm font-medium">
+          <Link href="/" className="text-[var(--text-secondary)] hover:text-[var(--primary-color)] transition-colors flex items-center gap-2 text-sm font-semibold">
             <ArrowLeft className="w-4 h-4" />
-            Home
+            Return Home
           </Link>
-          <div className="h-4 w-px bg-white/20" />
-          <h1 className="font-semibold text-white tracking-tight">Active Evaluation</h1>
+          <div className="h-5 w-px bg-[var(--primary-color)]/20" />
+          <h1 className="font-[family-name:var(--font-playfair)] font-bold text-xl tracking-wide text-[var(--text-primary)]">Active Evaluation</h1>
         </div>
         
         {/* Character Selector */}
-        <div className="flex bg-[#0A0A0A] border border-white/10 rounded-md overflow-hidden">
+        <div className="flex bg-white border border-[var(--primary-color)]/20 rounded-full overflow-hidden shadow-sm p-1">
           <button 
-            className={`px-4 py-1.5 text-sm font-medium transition-colors ${activeCharacter === 'mahiru' ? 'bg-white text-black' : 'text-[#A0A0A0] hover:text-white'}`}
+            className={`px-6 py-1.5 text-sm font-bold rounded-full transition-all duration-300 ${activeCharacter === 'mahiru' ? 'bg-[var(--primary-color)] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[var(--primary-color)] hover:bg-[var(--primary-color)]/5'}`}
             onClick={() => setActiveCharacter('mahiru')}
           >
             Mahiru
           </button>
-          <div className="w-px bg-white/10" />
           <button 
-            className={`px-4 py-1.5 text-sm font-medium transition-colors ${activeCharacter === 'amane' ? 'bg-white text-black' : 'text-[#A0A0A0] hover:text-white'}`}
+            className={`px-6 py-1.5 text-sm font-bold rounded-full transition-all duration-300 ${activeCharacter === 'amane' ? 'bg-[#8CA899] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[#8CA899] hover:bg-[#8CA899]/5'}`}
             onClick={() => setActiveCharacter('amane')}
           >
             Amane
@@ -182,23 +218,23 @@ export default function TrainingPage() {
         </div>
       </nav>
 
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden relative z-10">
         
         {/* Main Interface */}
         <div className="flex-1 flex flex-col items-center justify-end pb-12 px-4 relative z-10">
           
           {/* Character Display */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none opacity-80 mix-blend-lighten">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none opacity-90 drop-shadow-2xl">
             <AnimatePresence mode="wait">
               <motion.img 
                 key={`${activeCharacter}-${currentEmotion}`}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.05 }}
-                transition={{ duration: 0.5 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
                 src={`/${getSpriteFilename(activeCharacter, currentEmotion)}`} 
                 alt="Character" 
-                className="max-h-[70vh] object-contain"
+                className="max-h-[75vh] object-contain"
                 onError={(e) => {
                   const fallback = activeCharacter === "mahiru" ? "mahiru_waiting.png" : "amane_happy.png";
                   if (!e.currentTarget.src.includes(fallback)) {
@@ -212,45 +248,43 @@ export default function TrainingPage() {
           </div>
 
           {/* Dialogue Box */}
-          <div className="w-full max-w-3xl bg-[#0A0A0A]/80 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl relative z-10 overflow-hidden">
+          <div className="w-full max-w-3xl bg-white/80 backdrop-blur-xl border border-[var(--primary-color)]/20 rounded-3xl shadow-[0_8px_30px_rgba(212,175,55,0.15)] relative z-10 overflow-visible">
             
-            {/* Header */}
-            <div className="bg-white/5 border-b border-white/10 px-6 py-3 flex items-center justify-between">
-               <div className="text-xs font-bold uppercase tracking-widest text-[#A0A0A0]">
-                 {currentDialogue.role === "coach" ? (activeCharacter === "mahiru" ? "Mahiru" : "Amane") : "You"}
-               </div>
+            {/* Floating Name Tag */}
+            <div className={`absolute -top-5 left-8 px-6 py-1.5 rounded-full text-sm font-bold tracking-widest text-white shadow-md ${currentDialogue.role === "coach" ? (activeCharacter === "mahiru" ? 'bg-[var(--secondary-color)]' : 'bg-[var(--tertiary-color)]') : 'bg-[var(--text-secondary)]'}`}>
+              {currentDialogue.role === "coach" ? (activeCharacter === "mahiru" ? "MAHIRU" : "AMANE") : "YOU"}
             </div>
             
             {/* Dialogue Text */}
-            <div className="p-6 md:p-8 min-h-[120px] text-lg leading-relaxed font-light">
+            <div className="p-8 pt-10 min-h-[140px] text-[1.1rem] leading-relaxed font-medium text-[var(--text-primary)]">
               {currentDialogue.role === "coach" && currentDialogue.content !== "..." ? (
                 <TypewriterText 
                   text={currentDialogue.content} 
                   onComplete={() => setIsTyping(false)} 
                 />
               ) : (
-                <span className="text-[#A0A0A0]">{currentDialogue.content}</span>
+                <span className="text-[var(--text-secondary)] opacity-70">{currentDialogue.content}</span>
               )}
             </div>
             
             {/* Input Area */}
-            <div className="p-4 border-t border-white/10 bg-[#000000]/50">
+            <div className="p-4 border-t border-[var(--primary-color)]/10 bg-white/50 rounded-b-3xl">
               <div className="flex items-center gap-3">
                 <input 
                   type="text" 
-                  className="flex-1 bg-transparent border-none outline-none text-[#EDEDED] placeholder-[#A0A0A0] font-light px-2"
+                  className="flex-1 bg-transparent border-none outline-none text-[var(--text-primary)] placeholder-[var(--text-secondary)] font-medium px-4 py-2"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="Type your response..."
+                  placeholder="Respond carefully..."
                   disabled={isLoading || isTyping}
                 />
                 <button 
-                  className={`p-2 rounded-md transition-colors ${!input.trim() || isLoading || isTyping ? 'text-white/20' : 'bg-white text-black hover:bg-gray-200'}`}
+                  className={`p-3 rounded-full transition-all duration-300 shadow-sm ${!input.trim() || isLoading || isTyping ? 'bg-[var(--surface-low)] text-[var(--text-secondary)] opacity-50' : 'bg-[var(--primary-color)] text-white hover:bg-[#B5952F] hover:shadow-[0_4px_15px_rgba(212,175,55,0.3)] hover:-translate-y-0.5'}`}
                   onClick={handleSend}
                   disabled={isLoading || isTyping || !input.trim()}
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-5 h-5 ml-1 mt-0.5" />
                 </button>
               </div>
             </div>
@@ -259,53 +293,56 @@ export default function TrainingPage() {
         </div>
 
         {/* Real-time Analyst Panel */}
-        <div className="w-80 border-l border-white/10 bg-[#0A0A0A] flex flex-col relative z-10">
-          <div className="p-6 border-b border-white/10">
-            <h2 className="text-sm font-semibold tracking-tight">Real-Time Analysis</h2>
-            <p className="text-xs text-[#A0A0A0] mt-1">Live metrics from your speech patterns.</p>
+        <div className="w-80 border-l border-[var(--primary-color)]/10 bg-white/70 backdrop-blur-md flex flex-col relative z-10 shadow-[-4px_0_20px_rgba(212,175,55,0.05)]">
+          <div className="p-6 border-b border-[var(--primary-color)]/10 bg-gradient-to-b from-[var(--surface-low)]/50 to-transparent">
+            <h2 className="text-lg font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)] tracking-wide">Live Analysis</h2>
+            <p className="text-xs text-[var(--text-secondary)] font-medium mt-1">Evaluating communication clarity.</p>
           </div>
           
-          <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+          <div className="p-6 space-y-8 flex-1 overflow-y-auto">
             
-            <div>
-              <div className="flex items-center gap-2 mb-2 text-[#A0A0A0]">
+            <div className="bg-white p-5 rounded-2xl border border-[var(--primary-color)]/10 shadow-sm">
+              <div className="flex items-center gap-2 mb-3 text-[var(--primary-color)]">
                 <Activity className="w-4 h-4" />
-                <span className="text-xs font-semibold uppercase tracking-wider">Passiveness</span>
+                <span className="text-xs font-bold uppercase tracking-widest">Passiveness</span>
               </div>
-              <div className="text-2xl font-semibold">
-                {latestFeedback ? latestFeedback.passiveness_score : 0}<span className="text-[#A0A0A0] text-sm">/10</span>
+              <div className="text-3xl font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)]">
+                {latestFeedback ? latestFeedback.passiveness_score : 0}<span className="text-[var(--text-secondary)] text-lg">/10</span>
               </div>
               {latestFeedback && latestFeedback.passiveness_score > 5 && (
-                <div className="text-xs text-red-400 mt-1 font-medium">Critical passiveness detected</div>
+                <div className="text-xs text-[#D98A94] mt-2 font-bold bg-[#D98A94]/10 px-3 py-1.5 rounded-md inline-block">Correction required</div>
               )}
             </div>
             
-            <div>
-              <div className="flex items-center gap-2 mb-2 text-[#A0A0A0]">
-                <MessageSquareWarning className="w-4 h-4" />
-                <span className="text-xs font-semibold uppercase tracking-wider">Apologies</span>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white p-4 rounded-2xl border border-[var(--primary-color)]/10 shadow-sm">
+                <div className="flex flex-col gap-1 mb-2 text-[var(--primary-color)]">
+                  <MessageSquareWarning className="w-4 h-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Apologies</span>
+                </div>
+                <div className="text-2xl font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)]">
+                  {latestFeedback ? latestFeedback.apology_count : 0}
+                </div>
               </div>
-              <div className="text-2xl font-semibold">
-                {latestFeedback ? latestFeedback.apology_count : 0}
-              </div>
-            </div>
 
-            <div>
-              <div className="flex items-center gap-2 mb-2 text-[#A0A0A0]">
-                <PauseCircle className="w-4 h-4" />
-                <span className="text-xs font-semibold uppercase tracking-wider">Hesitations</span>
-              </div>
-              <div className="text-2xl font-semibold">
-                {latestFeedback ? latestFeedback.hesitation_count : 0}
+              <div className="bg-white p-4 rounded-2xl border border-[var(--primary-color)]/10 shadow-sm">
+                <div className="flex flex-col gap-1 mb-2 text-[var(--primary-color)]">
+                  <PauseCircle className="w-4 h-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Hesitations</span>
+                </div>
+                <div className="text-2xl font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)]">
+                  {latestFeedback ? latestFeedback.hesitation_count : 0}
+                </div>
               </div>
             </div>
 
             <div className="mt-8">
-              <div className="text-xs font-semibold uppercase tracking-wider text-[#A0A0A0] mb-3">
+              <div className="text-xs font-bold uppercase tracking-widest text-[var(--primary-color)] mb-3 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[var(--primary-color)]" />
                 Coach Notes
               </div>
-              <div className="text-sm text-[#A0A0A0] leading-relaxed p-4 bg-white/5 rounded-md border border-white/10">
-                {latestFeedback ? latestFeedback.feedback_notes : "Awaiting input..."}
+              <div className="text-sm text-[var(--text-secondary)] font-medium leading-relaxed p-5 bg-[var(--surface-low)] rounded-2xl border border-[var(--primary-color)]/10 shadow-inner">
+                {latestFeedback ? latestFeedback.feedback_notes : "Awaiting your first interaction..."}
               </div>
             </div>
 

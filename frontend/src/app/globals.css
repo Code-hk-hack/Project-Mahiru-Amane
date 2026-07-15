@@ -5,24 +5,24 @@
 @tailwind utilities;
 
 :root {
-  /* Linear/Vercel Enterprise Palette */
-  --surface-lowest: #000000;
-  --surface-low: #0A0A0A;
-  --surface: #111111;
-  --primary-color: #FFFFFF; 
-  --secondary-color: #888888; 
-  --tertiary-color: #333333; 
-  --text-primary: #EDEDED;
-  --text-secondary: #A0A0A0;
+  /* Angelic/Cozy Palette (Mahiru Theme) */
+  --surface-lowest: #FCFBF9; /* Warm Cream */
+  --surface-low: #F5F3EC; /* Ivory */
+  --surface: #FFFFFF;
+  --primary-color: #D4AF37; /* Angelic Gold */
+  --secondary-color: #FFB6C1; /* Soft Peach/Pink */
+  --tertiary-color: #A3C1AD; /* Soft Mint (Amane contrast) */
+  --text-primary: #4A4036; /* Deep Warm Charcoal */
+  --text-secondary: #8C8074; /* Soft Taupe */
   
-  /* Glassmorphism */
-  --glass-bg: rgba(10, 10, 10, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-blur: blur(12px);
+  /* Frosted Glass */
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(212, 175, 55, 0.2); /* Soft Gold border */
+  --glass-blur: blur(16px);
   
   /* Character Mapping */
-  --mahiru-color: #FFFFFF;
-  --amane-color: #888888;
+  --mahiru-color: #FFB6C1;
+  --amane-color: #A3C1AD;
 }
 
 * {
@@ -32,14 +32,21 @@
 }
 
 body {
-  font-family: var(--font-geist-sans), 'Inter', sans-serif;
+  font-family: var(--font-quicksand), sans-serif;
   color: var(--text-primary);
   background: var(--surface-lowest);
-  /* Brutalist Subtle Grid */
-  background-image: linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.95)), 
-                    url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiLz4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsIDI1NSwgMjU1LCAwLjA1KSIvPgo8L3N2Zz4=');
+  /* Elegant soft grid pattern */
+  background-image: linear-gradient(rgba(252, 251, 249, 0.8), rgba(252, 251, 249, 0.95)), 
+                    url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiLz4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyMTIsIDE3NSwgNTUsIDAuMTUpIi8+Cjwvc3ZnPg==');
   background-size: 40px 40px;
   min-height: 100vh;
+}
+
+/* Floating Light Particles Animation */
+@keyframes float {
+  0% { transform: translateY(0px) rotate(0deg); opacity: 0; }
+  50% { opacity: 0.8; }
+  100% { transform: translateY(-100px) rotate(45deg); opacity: 0; }
 }
 
 .vn-container {
