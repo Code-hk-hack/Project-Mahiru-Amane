@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Meteors } from "@/components/ui/MeteorEffect";
+import { CardSpotlight } from "@/components/ui/CardSpotlight";
+import { TextGenerateEffect } from "@/components/ui/TextGenerateEffect";
 import { Activity, TrendingUp, AlertCircle } from "lucide-react";
 
 export default function DashboardPage() {
@@ -27,7 +29,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col p-8 md:p-16 relative overflow-hidden bg-[#0d0d18] text-white">
+    <div className="min-h-screen flex flex-col p-8 md:p-16 relative overflow-x-hidden overflow-y-auto bg-[#0d0d18] text-white">
       {/* Meteor Background */}
       <div className="absolute inset-0 z-0">
         <Meteors number={30} />
@@ -51,9 +53,9 @@ export default function DashboardPage() {
         animate="show"
         className="z-10 w-full max-w-6xl mx-auto"
       >
-        <motion.h1 variants={itemVariants} className="text-4xl mb-12 font-[family-name:JetBrains_Mono] font-bold">
-          Performance <span className="text-[var(--secondary-color)]">Analytics</span>
-        </motion.h1>
+        <div className="text-4xl mb-12 font-[family-name:JetBrains_Mono] font-bold">
+          <TextGenerateEffect words="Performance Analytics" className="text-[var(--secondary-color)] drop-shadow-lg" />
+        </div>
 
         {/* Top Metric Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
@@ -62,38 +64,44 @@ export default function DashboardPage() {
             { label: "Total Apologies", value: "14", highlight: "var(--secondary-color)", icon: <AlertCircle />, trend: "4 this week" },
             { label: "Hesitation Markers", value: "89", highlight: "var(--tertiary-color)", icon: <TrendingUp />, trend: "Mostly 'I guess'" }
           ].map((metric, idx) => (
-            <motion.div key={idx} variants={itemVariants} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-1 h-full transition-all duration-300 group-hover:w-2" style={{ background: metric.highlight }} />
-              
-              <div className="flex justify-between items-start mb-4">
-                <div className="font-[family-name:JetBrains_Mono] text-sm text-gray-400 uppercase tracking-widest">
-                  {metric.label}
+            <motion.div key={idx} variants={itemVariants}>
+              <CardSpotlight className="h-full group">
+                <div className="absolute top-0 left-0 w-1 h-full transition-all duration-300 group-hover:w-2" style={{ background: metric.highlight }} />
+                
+                <div className="flex justify-between items-start mb-4">
+                  <div className="font-[family-name:JetBrains_Mono] text-sm text-gray-400 uppercase tracking-widest">
+                    {metric.label}
+                  </div>
+                  <div className="text-gray-500">{metric.icon}</div>
                 </div>
-                <div className="text-gray-500">{metric.icon}</div>
-              </div>
-              
-              <div className="text-6xl font-extrabold text-white mb-4">
-                {metric.value}
-              </div>
-              <div className="font-bold text-sm" style={{ color: metric.highlight }}>
-                {metric.trend}
-              </div>
+                
+                <div className="text-6xl font-extrabold text-white mb-4 drop-shadow-md">
+                  {metric.value}
+                </div>
+                <div className="font-bold text-sm" style={{ color: metric.highlight }}>
+                  {metric.trend}
+                </div>
+              </CardSpotlight>
             </motion.div>
           ))}
         </div>
 
         {/* Main Chart Area */}
-        <motion.div variants={itemVariants} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-10 mb-16">
-          <h2 className="font-[family-name:JetBrains_Mono] text-xl mb-10 text-gray-400">Passiveness Score Over Time</h2>
-          
-          <div className="h-[300px] flex items-end gap-4 pb-8 border-b border-white/10">
+        <motion.div variants={itemVariants}>
+          <CardSpotlight className="mb-16 p-10">
+            <h2 className="font-[family-name:JetBrains_Mono] text-xl mb-10 text-gray-400">Passiveness Score Over Time</h2>
+            
+            <div className="h-[300px] flex items-end gap-4 pb-8 border-b border-white/10">
             {[8, 7, 9, 6, 5, 5, 4, 3, 2, 3, 1, 2].map((val, i) => (
               <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
                 <motion.div 
-                  initial={{ height: 0 }}
-                  animate={{ height: mounted ? `${val * 10}%` : 0 }}
-                  transition={{ duration: 1.5, type: "spring", bounce: 0.4, delay: 0.5 + (i * 0.05) }}
-                  className="w-full rounded-t-lg bg-gradient-to-t from-[var(--primary-color)] to-[var(--secondary-color)] opacity-90 hover:opacity-100 transition-opacity cursor-pointer shadow-[0_0_20px_rgba(0,224,255,0.3)]"
+                  initial={{ height: 0, filter: "hue-rotate(0deg)" }}
+                  animate={{ height: mounted ? `${val * 10}%` : 0, filter: "hue-rotate(360deg)" }}
+                  transition={{ 
+                    height: { duration: 1.5, type: "spring", bounce: 0.5, delay: 0.5 + (i * 0.1) },
+                    filter: { duration: 8, repeat: Infinity, ease: "linear" }
+                  }}
+                  className="w-full rounded-t-lg bg-gradient-to-t from-[var(--primary-color)] to-[var(--secondary-color)] opacity-90 hover:opacity-100 transition-opacity cursor-pointer shadow-[0_0_30px_rgba(0,224,255,0.4)]"
                 />
               </div>
             ))}
@@ -103,6 +111,7 @@ export default function DashboardPage() {
             <span>Session 6</span>
             <span>Session 12 (Current)</span>
           </div>
+          </CardSpotlight>
         </motion.div>
       </motion.div>
     </div>
