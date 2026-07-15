@@ -17,33 +17,48 @@ class AnalystFeedback(BaseModel):
     hesitation_count: int = Field(..., description="Number of hesitation markers like 'um', 'uh', 'maybe'.")
     feedback_notes: str = Field(..., description="Structural feedback for the Coach to deliver.")
 
+# Cache the knowledge base and MCP tools so we don't read them on every request
+_hr_knowledge_cache = None
+_mcp_raw_tools_cache = None
+
 class AnalystAgent:
     @staticmethod
     def analyze(user_message: str) -> AnalystFeedback:
         """
-        Analyzes the user's message for passive language and boundary setting using Gemini 1.5 Flash.
+        Analyzes the user's message for passive language and boundary setting using Groq for near-zero latency.
         """
-        # Read knowledge base directly for near-zero latency (no embedding API calls)
-        hr_knowledge = "{}"
-        try:
-            with open("hr_knowledge_base.json", "r", encoding="utf-16") as f:
-                hr_knowledge = f.read()
-        except Exception:
-            pass
+        global _hr_knowledge_cache
+        if _hr_knowledge_cache is None:
+            try:
+                with open("hr_knowledge_base.json", "r", encoding="utf-16") as f:
+                    _hr_knowledge_cache = f.read()
+            except Exception:
+                _hr_knowledge_cache = "{}"
 
-        gemini_api_key = os.environ.get("GEMINI_API_KEY")
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash", 
-            google_api_key=gemini_api_key,
-            temperature=0.2
+        # Initialize Groq for lightning-fast structured output
+        groq_api_key = os.environ.get("GROQ_API_KEY")
+        primary_llm = ChatGroq(
+            model="llama-3.3-70b-versatile",
+            api_key=groq_api_key,
+            temperature=0.1
         )
         
+        # Fallback to Gemini if Groq rate limits
+        gemini_api_key = os.environ.get("GEMINI_API_KEY")
+        fallback_llm = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash", 
+            google_api_key=gemini_api_key,
+            temperature=0.1
+        )
+        
+        # Langchain fallback logic for structured output
+        llm = primary_llm.with_fallbacks([fallback_llm])
         structured_llm = llm.with_structured_output(AnalystFeedback)
 
         system_prompt = (
             "You are an Analyst Agent for a social confidence and interview training simulator. "
             "Your job is to evaluate the user's input for passiveness, excessive apologies, and hesitation. "
-            f"Base your evaluation strictly on the following HR Interview Guidelines and Rubrics: {hr_knowledge}. "
+            f"Base your evaluation strictly on the following HR Interview Guidelines and Rubrics: {_hr_knowledge_cache}. "
         )
         
         result = structured_llm.invoke([
@@ -140,22 +155,27 @@ Valid emotions: {emotions_list}
         # LangChain fallback logic
         llm = primary_llm.with_fallbacks([fallback_llm])
 
-        mcp_session = await get_mcp_session()
-        raw_tools = []
-        if mcp_session:
-            try:
-                mcp_tools = await mcp_session.list_tools()
-                for t in mcp_tools.tools:
-                    raw_tools.append({
-                        "type": "function",
-                        "function": {
-                            "name": t.name,
-                            "description": t.description,
-                            "parameters": t.inputSchema
-                        }
-                    })
-            except Exception as e:
-                print(f"Failed to fetch tools from Slashy MCP: {e}")
+        # Cache MCP tools globally to avoid 1-2s latency per request
+        global _mcp_raw_tools_cache
+        if _mcp_raw_tools_cache is None:
+            mcp_session = await get_mcp_session()
+            _mcp_raw_tools_cache = []
+            if mcp_session:
+                try:
+                    mcp_tools = await mcp_session.list_tools()
+                    for t in mcp_tools.tools:
+                        _mcp_raw_tools_cache.append({
+                            "type": "function",
+                            "function": {
+                                "name": t.name,
+                                "description": t.description,
+                                "parameters": t.inputSchema
+                            }
+                        })
+                except Exception as e:
+                    print(f"Failed to fetch tools from Slashy MCP: {e}")
+        
+        raw_tools = _mcp_raw_tools_cache
 
         # Currently for streaming with fallbacks, tool calling can be complex. 
         # If we need tools, we'd bind them. We will bind them to both models.
