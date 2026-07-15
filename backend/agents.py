@@ -67,7 +67,7 @@ def ensure_session_exists(db, session_id: str):
 
 class CoachAgent:
     @staticmethod
-    async def respond(user_message: str, analyst_feedback: AnalystFeedback, difficulty: str = "neutral", session_id: str = None) -> tuple[str, str]:
+    async def respond(user_message: str, analyst_feedback: AnalystFeedback, difficulty: str = "neutral", session_id: str = None, character: str = "mahiru") -> tuple[str, str]:
         """
         Generates the Mahiru/Amane response incorporating the analyst feedback, executing tools, and using conversation history.
         """
@@ -77,8 +77,15 @@ class CoachAgent:
         if session_id and session_id != "default-session":
             ensure_session_exists(db, session_id)
             
+        if character.lower() == "amane":
+            emotions_list = "impressed, impressed_starlted, sad, sad_notimpressed, shy, sleepy, small_smile, starlted, startled_happy_joy"
+            default_emotion = "impressed"
+        else:
+            emotions_list = "waiting, waiting_2, happy, little_happy, very_happy, angry, concerned, sleepy, thinking"
+            default_emotion = "waiting"
+            
         system_prompt = f"""
-You are the Coach Agent (Mahiru/Amane). You are a strict, no-nonsense mentor teaching social confidence.
+You are the Coach Agent ({character.capitalize()}). You are a strict, no-nonsense mentor teaching social confidence.
 The No-Escapism Mandate is active: Do NOT engage in romantic roleplay. Do NOT be a yes-man.
 Current difficulty tier: {difficulty}. Adjust your personality (e.g., distracted, impatient, neutral) accordingly.
 
@@ -94,7 +101,7 @@ If you need to perform an action for the user (like sending an email or checking
 CRITICAL INSTRUCTION: You MUST format your final response to the user as a valid JSON object with the following schema:
 {{
   "response": "Your spoken dialogue here...",
-  "emotion": "neutral" // Must be one of: neutral, happy, angry, sad, surprised, shy, sleepy
+  "emotion": "{default_emotion}" // Must be one of: {emotions_list}
 }}
 """
         messages = [
@@ -158,7 +165,17 @@ CRITICAL INSTRUCTION: You MUST format your final response to the user as a valid
                 
                 # Parse JSON for response and emotion
                 try:
-                    data = json.loads(final_response)
+                    # Strip markdown code blocks if the LLM wrapped it
+                    cleaned_response = final_response.strip()
+                    if cleaned_response.startswith("```json"):
+                        cleaned_response = cleaned_response[7:]
+                    elif cleaned_response.startswith("```"):
+                        cleaned_response = cleaned_response[3:]
+                    if cleaned_response.endswith("```"):
+                        cleaned_response = cleaned_response[:-3]
+                    cleaned_response = cleaned_response.strip()
+
+                    data = json.loads(cleaned_response)
                     coach_text = data.get("response", "...")
                     emotion = data.get("emotion", "neutral")
                 except json.JSONDecodeError:

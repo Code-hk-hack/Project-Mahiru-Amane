@@ -52,38 +52,49 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState("");
-  const [currentEmotion, setCurrentEmotion] = useState("neutral");
+  // Emotion state moved to after activeCharacter
   
   useEffect(() => {
-    // Generate a random session ID on component mount
-    setSessionId(crypto.randomUUID());
+    let storedSessionId = localStorage.getItem("mahiru_session_id");
+    if (!storedSessionId) {
+      storedSessionId = crypto.randomUUID();
+      localStorage.setItem("mahiru_session_id", storedSessionId);
+    }
+    setSessionId(storedSessionId);
+
+    const fetchHistory = async () => {
+      try {
+        const res = await fetch(`http://127.0.0.1:8000/chat/history?session_id=${storedSessionId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.messages && data.messages.length > 0) {
+            setMessages(data.messages);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch chat history:", err);
+      }
+    };
+    
+    fetchHistory();
   }, []);
   
   // Support for both characters
   const [activeCharacter, setActiveCharacter] = useState<"mahiru" | "amane">("mahiru");
+  const [currentEmotion, setCurrentEmotion] = useState("waiting");
+  
+  // When active character changes, reset emotion to their default
+  useEffect(() => {
+    setCurrentEmotion(activeCharacter === "mahiru" ? "waiting" : "impressed");
+  }, [activeCharacter]);
   
   const getSpriteFilename = (character: "mahiru" | "amane", emotion: string) => {
-    if (character === "mahiru") {
-      switch (emotion) {
-        case "happy": return "mahiru_happy.png";
-        case "angry": return "mahiru_angry.png";
-        case "sad": return "mahiru_concerned.png";
-        case "surprised": return "mahiru_waiting_2.png";
-        case "shy": return "mahiru_thinking.png";
-        case "sleepy": return "mahiru_sleepy.png";
-        default: return "mahiru_waiting.png";
-      }
-    } else {
-      switch (emotion) {
-        case "happy": return "amane_small_smile.png";
-        case "angry": return "amane_sad_notimpressed.png";
-        case "sad": return "amane_sad.png";
-        case "surprised": return "amane_starlted.png"; 
-        case "shy": return "amane_shy.png";
-        case "sleepy": return "amane_sleepy.png";
-        default: return "amane_impressed.png";
-      }
+    // The backend now outputs the exact image filename based on the available files
+    // If the emotion is still 'neutral' from an old chat, map it to the defaults
+    if (emotion === "neutral") {
+      emotion = character === "mahiru" ? "waiting" : "impressed";
     }
+    return `${character}_${emotion}.png`;
   };
   
   const spriteRef = useRef(null);
@@ -111,25 +122,28 @@ export default function Home() {
   const handleSend = async () => {
     if (!input.trim() || isTyping || isLoading) return;
 
-    const userMsg = input;
+    const userMessage = input;
     setInput("");
     
-    const newMessages = [...messages, { role: "user" as const, content: userMsg }];
+    const newMessages = [...messages, { role: "user" as const, content: userMessage }];
     setMessages(newMessages);
     setIsLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/chat", {
+      const response = await fetch("http://localhost:8000/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ 
-          message: userMsg, 
-          difficulty: "neutral",
-          session_id: sessionId
-        })
+          message: userMessage, 
+          difficulty: "hard", 
+          session_id: sessionId,
+          character: activeCharacter
+        }),
       });
       
-      const data = await res.json();
+      const data = await response.json();
       
       setMessages(prev => [...prev, {
         role: "coach",
@@ -194,7 +208,7 @@ export default function Home() {
             <img src={`/${getSpriteFilename(activeCharacter, currentEmotion)}`} alt={`${activeCharacter} ${currentEmotion}`} className="character-image" 
               onError={(e) => {
                 // Fallback to neutral if specific emotion doesn't exist
-                const fallback = getSpriteFilename(activeCharacter, "neutral");
+                const fallback = activeCharacter === "mahiru" ? "mahiru_waiting.png" : "amane_impressed.png";
                 if (!e.currentTarget.src.includes(fallback)) {
                   e.currentTarget.src = `/${fallback}`;
                 } else {

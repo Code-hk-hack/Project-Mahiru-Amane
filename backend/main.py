@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], # In production, this should be restricted
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -28,6 +28,7 @@ class ChatRequest(BaseModel):
     message: str
     difficulty: str = "neutral"
     session_id: str = "default-session"
+    character: str = "mahiru"
 
 class ChatResponse(BaseModel):
     coach_response: str
@@ -53,8 +54,34 @@ async def chat_endpoint(request: ChatRequest):
         feedback = AnalystAgent.analyze(request.message)
         
         # Step 2: Coach generates a response incorporating the feedback
-        response, emotion = await CoachAgent.respond(request.message, feedback, request.difficulty, request.session_id)
+        response, emotion = await CoachAgent.respond(request.message, feedback, request.difficulty, request.session_id, request.character)
         
         return ChatResponse(coach_response=response, feedback=feedback, emotion=emotion)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/chat/history")
+def get_chat_history(session_id: str):
+    try:
+        db = get_db()
+        # Fetch conversation history from Supabase
+        history_res = db.table('messages').select('*').eq('session_id', session_id).order('created_at').execute()
+        
+        formatted_messages = []
+        for msg in history_res.data:
+            formatted_msg = {
+                "role": msg['role'],
+                "content": msg['content']
+            }
+            if msg['role'] == 'user' and msg.get('passiveness_score') is not None:
+                formatted_msg["feedback"] = {
+                    "passiveness_score": msg.get('passiveness_score'),
+                    "apology_count": msg.get('apology_count'),
+                    "hesitation_count": msg.get('hesitation_count'),
+                    "feedback_notes": msg.get('feedback_notes')
+                }
+            formatted_messages.append(formatted_msg)
+            
+        return {"messages": formatted_messages}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
