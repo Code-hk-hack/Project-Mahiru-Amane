@@ -17,21 +17,21 @@ interface Message {
   feedback?: AnalystFeedback;
 }
 
-// Custom Typewriter Component for Visual Novel text rendering
 const TypewriterText = ({ text, onComplete }: { text: string, onComplete?: () => void }) => {
   const [displayedText, setDisplayedText] = useState("");
   
   useEffect(() => {
     setDisplayedText("");
+    const safeText = text || "";
     let i = 0;
     const interval = setInterval(() => {
-      setDisplayedText(text.substring(0, i + 1));
+      setDisplayedText(safeText.substring(0, i + 1));
       i++;
-      if (i >= text.length) {
+      if (i >= safeText.length) {
         clearInterval(interval);
         if (onComplete) onComplete();
       }
-    }, 25); // Classic VN typing speed
+    }, 25); 
     
     return () => clearInterval(interval);
   }, [text, onComplete]);
@@ -45,10 +45,12 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   
+  // Support for both characters
+  const [activeCharacter, setActiveCharacter] = useState<"mahiru" | "amane">("mahiru");
+  
   const spriteRef = useRef(null);
   const chatLogRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll chat log
   useEffect(() => {
     if (chatLogRef.current) {
       chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
@@ -56,15 +58,14 @@ export default function Home() {
   }, [messages]);
 
   useEffect(() => {
-    // Anime.js continuous floating animation
     if (spriteRef.current) {
       anime({
         targets: spriteRef.current,
-        translateY: [15, -15],
+        translateY: [10, -10],
         direction: 'alternate',
         loop: true,
         easing: 'easeInOutSine',
-        duration: 3000
+        duration: 3500
       });
     }
   }, []);
@@ -90,13 +91,12 @@ export default function Home() {
       
       setMessages(prev => [...prev, {
         role: "coach",
-        content: data.coach_response,
+        content: data.coach_response || "...",
         feedback: data.feedback
       }]);
       
       setIsTyping(true);
       
-      // Anime.js reactive pulse
       if (spriteRef.current) {
         anime({
           targets: spriteRef.current,
@@ -114,44 +114,60 @@ export default function Home() {
   };
 
   const latestFeedback = messages.filter(m => m.feedback).pop()?.feedback;
-  
-  // Find the last message to display in the main dialogue box
   const currentDialogue = messages.length > 0 && messages[messages.length - 1].role === "coach" 
     ? messages[messages.length - 1] 
     : { role: "coach", content: "..." };
 
   return (
     <div className="vn-container">
-      {/* Character Sprite */}
+      <div className="bg-vignette" />
+      
+      {/* Character Selector HUD */}
+      <div className="character-selector">
+        <button 
+          className={`char-btn mahiru ${activeCharacter === 'mahiru' ? 'active' : ''}`}
+          onClick={() => setActiveCharacter('mahiru')}
+        >
+          Mahiru
+        </button>
+        <button 
+          className={`char-btn amane ${activeCharacter === 'amane' ? 'active' : ''}`}
+          onClick={() => setActiveCharacter('amane')}
+        >
+          Amane
+        </button>
+      </div>
+
       <div className="character-display">
         <motion.div 
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
+          key={activeCharacter} // Re-animate when character switches
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
         >
           <div ref={spriteRef} className="character-sprite">
-            <img src="/mahiru_sprite.png" alt="Mahiru" className="character-image" />
+            {/* Loads either mahiru_sprite.png or amane_sprite.png */}
+            <img src={`/${activeCharacter}_sprite.png`} alt={activeCharacter} className="character-image" 
+              onError={(e) => {
+                // Fallback if image not generated yet
+                e.currentTarget.style.display = 'none';
+              }} 
+            />
           </div>
         </motion.div>
       </div>
 
-      {/* UI Overlay */}
       <div className="ui-layer">
         
-        {/* Dialogue Box & Chat Log */}
-        <motion.div 
-          className="glass-panel dialogue-box"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.8 }}
-        >
+        <div className="dialogue-wrapper">
+          
           {/* Chat History Log */}
           {messages.length > 1 && (
             <div className="chat-log" ref={chatLogRef}>
               {messages.slice(0, -1).map((msg, i) => (
-                <div key={i} className={`log-entry ${msg.role}`}>
-                  <div className={`log-name ${msg.role}`}>
-                    {msg.role === 'coach' ? 'Mahiru' : 'You'}
+                <div key={i} className={`log-entry ${msg.role} ${msg.role === 'coach' ? activeCharacter : ''}`}>
+                  <div className={`log-name ${msg.role} ${msg.role === 'coach' ? activeCharacter : ''}`}>
+                    {msg.role === 'coach' ? (activeCharacter === 'mahiru' ? 'Mahiru' : 'Amane') : 'You'}
                   </div>
                   <div>{msg.content}</div>
                 </div>
@@ -159,71 +175,78 @@ export default function Home() {
             </div>
           )}
 
-          <div className="character-name">
-            {currentDialogue.role === "coach" ? "Mahiru" : "You"}
+          {/* Floating Name Tag */}
+          <div className={`name-tag ${currentDialogue.role === "coach" ? activeCharacter : "user"}`}>
+            {currentDialogue.role === "coach" ? (activeCharacter === "mahiru" ? "Mahiru" : "Amane") : "You"}
           </div>
           
-          <div className="dialogue-text">
-            {currentDialogue.role === "coach" && currentDialogue.content !== "..." ? (
-              <TypewriterText 
-                text={currentDialogue.content} 
-                onComplete={() => setIsTyping(false)} 
+          <motion.div 
+            className={`dialogue-box ${activeCharacter}`}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+          >
+            <div className="dialogue-text">
+              {currentDialogue.role === "coach" && currentDialogue.content !== "..." ? (
+                <TypewriterText 
+                  text={currentDialogue.content} 
+                  onComplete={() => setIsTyping(false)} 
+                />
+              ) : (
+                <span>{currentDialogue.content}</span>
+              )}
+            </div>
+
+            <div className="input-container">
+              <input 
+                type="text" 
+                className="chat-input"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="Type your response..."
+                disabled={isLoading || isTyping}
               />
-            ) : (
-              <span>{currentDialogue.content}</span>
-            )}
-          </div>
+              <button 
+                className="send-button"
+                onClick={handleSend}
+                disabled={isLoading || isTyping || !input.trim()}
+              >
+                {isLoading ? "..." : "Send"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
 
-          <div className="input-container">
-            <input 
-              type="text" 
-              className="chat-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Type your response..."
-              disabled={isLoading || isTyping}
-            />
-            <button 
-              className="send-button"
-              onClick={handleSend}
-              disabled={isLoading || isTyping || !input.trim()}
-            >
-              {isLoading ? "..." : "Send"}
-            </button>
-          </div>
-        </motion.div>
-
-        {/* Analyst Panel */}
         <motion.div 
-          className="glass-panel analyst-panel"
+          className="analyst-panel"
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.8, duration: 0.8 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
         >
           <div className="analyst-header">Analyst Overlay</div>
           
           <div className="metric-row">
             <span>Passiveness</span>
-            <span style={{ color: (latestFeedback?.passiveness_score || 0) > 5 ? 'var(--accent-pink)' : 'var(--text-primary)' }}>
+            <span style={{ color: (latestFeedback?.passiveness_score || 0) > 5 ? 'var(--mahiru-color)' : 'var(--text-primary)' }}>
               {latestFeedback ? latestFeedback.passiveness_score : 0}/10
             </span>
           </div>
           <div className="metric-row">
             <span>Apologies</span>
-            <span style={{ color: (latestFeedback?.apology_count || 0) > 0 ? 'var(--accent-pink)' : 'var(--text-primary)' }}>
+            <span style={{ color: (latestFeedback?.apology_count || 0) > 0 ? 'var(--mahiru-color)' : 'var(--text-primary)' }}>
               {latestFeedback ? latestFeedback.apology_count : 0}
             </span>
           </div>
           <div className="metric-row">
             <span>Hesitations</span>
-            <span style={{ color: (latestFeedback?.hesitation_count || 0) > 0 ? 'var(--accent-pink)' : 'var(--text-primary)' }}>
+            <span style={{ color: (latestFeedback?.hesitation_count || 0) > 0 ? 'var(--mahiru-color)' : 'var(--text-primary)' }}>
               {latestFeedback ? latestFeedback.hesitation_count : 0}
             </span>
           </div>
           
           <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            <strong style={{ color: 'var(--accent-cyan)' }}>COACH NOTES:</strong><br /><br />
+            <strong style={{ color: 'var(--amane-color)' }}>COACH NOTES:</strong><br /><br />
             {latestFeedback ? latestFeedback.feedback_notes : "Awaiting input..."}
           </div>
         </motion.div>
