@@ -1,9 +1,17 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from database import get_db
 from agents import AnalystAgent, CoachAgent, AnalystFeedback
+from mcp_client import init_mcp_client, close_mcp_client
 
-app = FastAPI(title="Project Mahiru/Amane Engine")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_mcp_client()
+    yield
+    await close_mcp_client()
+
+app = FastAPI(title="Project Mahiru/Amane Engine", lifespan=lifespan)
 
 # Add CORS middleware so the Next.js frontend can communicate with it
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +27,7 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
     difficulty: str = "neutral"
+    session_id: str = "default-session"
 
 class ChatResponse(BaseModel):
     coach_response: str
@@ -37,13 +46,13 @@ def health_check():
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat", response_model=ChatResponse)
-def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(request: ChatRequest):
     try:
         # Step 1: Analyst scores the user's message
         feedback = AnalystAgent.analyze(request.message)
         
         # Step 2: Coach generates a response incorporating the feedback
-        response = CoachAgent.respond(request.message, feedback, request.difficulty)
+        response = await CoachAgent.respond(request.message, feedback, request.difficulty, request.session_id)
         
         return ChatResponse(coach_response=response, feedback=feedback)
     except Exception as e:

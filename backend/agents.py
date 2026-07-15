@@ -48,12 +48,35 @@ class AnalystAgent:
         data = json.loads(result_str)
         return AnalystFeedback(**data)
 
+from mcp_client import get_mcp_session
+from database import get_db
+
+def ensure_session_exists(db, session_id: str):
+    """Ensure the session (and a dummy user) exists to satisfy foreign key constraints."""
+    try:
+        # Check if session exists
+        res = db.table('sessions').select('id').eq('id', session_id).execute()
+        if not res.data:
+            # Create a dummy user
+            user_res = db.table('users').insert({"username": f"user_{session_id[:8]}"}).execute()
+            user_id = user_res.data[0]['id']
+            # Create session
+            db.table('sessions').insert({"id": session_id, "user_id": user_id, "session_title": "Chat"}).execute()
+    except Exception as e:
+        print(f"Error ensuring session exists: {e}")
+
 class CoachAgent:
     @staticmethod
-    def respond(user_message: str, analyst_feedback: AnalystFeedback, difficulty: str = "neutral") -> str:
+    async def respond(user_message: str, analyst_feedback: AnalystFeedback, difficulty: str = "neutral", session_id: str = None) -> str:
         """
-        Generates the Mahiru/Amane response incorporating the analyst feedback.
+        Generates the Mahiru/Amane response incorporating the analyst feedback, executing tools, and using conversation history.
         """
+        db = get_db()
+        
+        # Ensure session exists if we have a session_id
+        if session_id and session_id != "default-session":
+            ensure_session_exists(db, session_id)
+            
         system_prompt = f"""
 You are the Coach Agent (Mahiru/Amane). You are a strict, no-nonsense mentor teaching social confidence.
 The No-Escapism Mandate is active: Do NOT engage in romantic roleplay. Do NOT be a yes-man.
@@ -66,12 +89,113 @@ The Analyst Agent has provided this structural feedback on the user's last messa
 - Notes: {analyst_feedback.feedback_notes}
 
 Address the user's message naturally in character, but weave in a harsh but constructive critique based on the Analyst's notes.
+If you need to perform an action for the user (like sending an email or checking a calendar), you MUST use the provided tools.
 """
-        completion = client.chat.completions.create(
-            model=MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
-            ]
-        )
-        return completion.choices[0].message.content
+        messages = [
+            {"role": "system", "content": system_prompt}
+        ]
+        
+        # Fetch conversation history from Supabase
+        if session_id and session_id != "default-session":
+            try:
+                history_res = db.table('messages').select('*').eq('session_id', session_id).order('created_at').limit(20).execute()
+                for msg in history_res.data:
+                    role = msg['role']
+                    # Map db roles to LLM roles
+                    if role == 'user':
+                        messages.append({"role": "user", "content": msg['content']})
+                    elif role == 'coach':
+                        messages.append({"role": "assistant", "content": msg['content']})
+            except Exception as e:
+                print(f"Failed to fetch history: {e}")
+
+        # Append the new user message
+        messages.append({"role": "user", "content": user_message})
+
+        mcp_session = await get_mcp_session()
+        groq_tools = []
+        
+        if mcp_session:
+            try:
+                mcp_tools = await mcp_session.list_tools()
+                for t in mcp_tools.tools:
+                    groq_tools.append({
+                        "type": "function",
+                        "function": {
+                            "name": t.name,
+                            "description": t.description,
+                            "parameters": t.inputSchema
+                        }
+                    })
+            except Exception as e:
+                print(f"Failed to fetch tools from Slashy MCP: {e}")
+
+        # Limit to 5 tool call iterations
+        for _ in range(5):
+            # Only pass tools argument if we actually have tools
+            kwargs = {}
+            if groq_tools:
+                kwargs["tools"] = groq_tools
+
+            completion = client.chat.completions.create(
+                model=MODEL,
+                messages=messages,
+                **kwargs
+            )
+            
+            response_message = completion.choices[0].message
+            messages.append(response_message)
+            
+            if not response_message.tool_calls:
+                final_response = response_message.content or "..."
+                
+                # Save to database
+                if session_id and session_id != "default-session":
+                    try:
+                        # Save User Message
+                        db.table('messages').insert({
+                            "session_id": session_id,
+                            "role": "user",
+                            "content": user_message,
+                            "passiveness_score": analyst_feedback.passiveness_score,
+                            "apology_count": analyst_feedback.apology_count,
+                            "hesitation_count": analyst_feedback.hesitation_count,
+                            "feedback_notes": analyst_feedback.feedback_notes
+                        }).execute()
+                        
+                        # Save Coach Response
+                        db.table('messages').insert({
+                            "session_id": session_id,
+                            "role": "coach",
+                            "content": final_response
+                        }).execute()
+                    except Exception as e:
+                        print(f"Failed to save messages to DB: {e}")
+
+                return final_response
+            
+            # Execute tool calls
+            for tool_call in response_message.tool_calls:
+                tool_name = tool_call.function.name
+                tool_args = json.loads(tool_call.function.arguments)
+                
+                print(f"Executing tool {tool_name} with args {tool_args}...")
+                tool_result_text = "Tool failed."
+                
+                if mcp_session:
+                    try:
+                        result = await mcp_session.call_tool(tool_name, tool_args)
+                        tool_result_text = str(result.content)
+                        print(f"Tool Result: {tool_result_text}")
+                    except Exception as e:
+                        tool_result_text = f"Error executing tool: {e}"
+                        print(tool_result_text)
+                
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "name": tool_name,
+                    "content": tool_result_text
+                })
+        
+        return "I tried to fulfill your request but it took too many steps."

@@ -44,6 +44,12 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [sessionId, setSessionId] = useState("");
+  
+  useEffect(() => {
+    // Generate a random session ID on component mount
+    setSessionId(crypto.randomUUID());
+  }, []);
   
   // Support for both characters
   const [activeCharacter, setActiveCharacter] = useState<"mahiru" | "amane">("mahiru");
@@ -84,7 +90,11 @@ export default function Home() {
       const res = await fetch("http://localhost:8000/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg, difficulty: "neutral" })
+        body: JSON.stringify({ 
+          message: userMsg, 
+          difficulty: "neutral",
+          session_id: sessionId
+        })
       });
       
       const data = await res.json();
