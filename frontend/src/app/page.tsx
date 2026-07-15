@@ -21,6 +21,12 @@ interface Message {
 const TypewriterText = ({ text, onComplete }: { text: string, onComplete?: () => void }) => {
   const [displayedText, setDisplayedText] = useState("");
   
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
   useEffect(() => {
     setDisplayedText("");
     const safeText = text || "";
@@ -30,12 +36,12 @@ const TypewriterText = ({ text, onComplete }: { text: string, onComplete?: () =>
       i++;
       if (i >= safeText.length) {
         clearInterval(interval);
-        if (onComplete) onComplete();
+        if (onCompleteRef.current) onCompleteRef.current();
       }
     }, 25); 
     
     return () => clearInterval(interval);
-  }, [text, onComplete]);
+  }, [text]);
 
   return <span>{displayedText}</span>;
 };
