@@ -165,7 +165,7 @@ export default function TrainingPage() {
       const decoder = new TextDecoder();
       
       let currentResponse = "";
-      let currentFeedback = undefined;
+      let currentFeedback: any = undefined;
       let currentEmotion = "neutral";
       
       setMessages(prev => [...prev, {
