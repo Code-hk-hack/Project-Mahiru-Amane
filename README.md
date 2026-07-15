@@ -31,6 +31,22 @@ This project uses a decoupled Monorepo architecture:
 1. **The Analyst Agent:** Silently evaluates the user's input for passive language, excessive apologies, hesitation, and poor boundary setting.
 2. **The Coach Agent (Mahiru/Amane):** Takes the Analyst's structural feedback and generates an in-character conversational response according to the current difficulty tier.
 
+## 💼 Hackathon Pitch: Training Youth for Interviews
+
+**The Problem:** Youth entering the workforce often struggle with extreme interview anxiety, imposter syndrome, and passive language ("I'm sorry", "Umm", "Maybe"). Standard interview prep feels clinical and boring.
+
+**Our Solution (The Training Mechanism):**
+By gamifying interview prep through a Visual Novel interface, we provide a high-pressure, emotionally charged environment. The harsh, "tsundere" AI coach forces the user to maintain their composure and assert boundaries. If a user can speak confidently to a strict anime mentor who is actively analyzing their every word, a real-life HR interviewer will feel easy by comparison.
+
+**How We Gain Data:**
+- **Real-Time Linguistics:** The Analyst Agent parses every single user message and scores it for Passiveness (0/10), Apologies, and Hesitations.
+- **Supabase Logging:** All conversation turns, alongside their linguistic scores, are permanently logged into our PostgreSQL database, tagged by `session_id`.
+
+**How We Use The Data (The Business Value):**
+- **Adaptive Difficulty:** As the database detects a user consistently scoring 0 on hesitations, the backend dynamically increases the "difficulty tier" (e.g., the interviewer acts distracted or impatient) to push the user further.
+- **Progress Tracking:** We can aggregate the Supabase data to show concrete improvement metrics over time (e.g., "User's apology frequency decreased by 40% over 5 sessions"). 
+- **Institutional Reporting:** This aggregated data provides massive value to schools, NGOs, and career centers looking to track the soft-skill development of their students.
+
 ## Getting Started 🚀
 
 ### Prerequisites
