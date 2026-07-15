@@ -89,7 +89,7 @@ class CoachAgent:
             
         if character.lower() == "amane":
             emotions_list = "impressed, impressed_starlted, sad, sad_notimpressed, shy, sleepy, small_smile, starlted, startled_happy_joy, happy"
-            default_emotion = "impressed"
+            default_emotion = "happy"
         else:
             emotions_list = "waiting, waiting_2, happy, little_happy, very_happy, angry, concerned, sleepy, thinking"
             default_emotion = "waiting"

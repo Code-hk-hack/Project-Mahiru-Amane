@@ -1,318 +1,218 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import anime from "animejs";
+import Link from "next/link";
 
-interface AnalystFeedback {
-  passiveness_score: number;
-  apology_count: number;
-  hesitation_count: number;
-  feedback_notes: string;
-}
-
-interface Message {
-  role: "user" | "coach";
-  content: string;
-  feedback?: AnalystFeedback;
-  emotion?: string;
-}
-
-const TypewriterText = ({ text, onComplete }: { text: string, onComplete?: () => void }) => {
-  const [displayedText, setDisplayedText] = useState("");
-  
-  const onCompleteRef = useRef(onComplete);
-
-  useEffect(() => {
-    onCompleteRef.current = onComplete;
-  }, [onComplete]);
-
-  useEffect(() => {
-    setDisplayedText("");
-    const safeText = text || "";
-    let i = 0;
-    const interval = setInterval(() => {
-      setDisplayedText(safeText.substring(0, i + 1));
-      i++;
-      if (i >= safeText.length) {
-        clearInterval(interval);
-        if (onCompleteRef.current) onCompleteRef.current();
-      }
-    }, 25); 
-    
-    return () => clearInterval(interval);
-  }, [text]);
-
-  return <span>{displayedText}</span>;
-};
-
-export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [sessionId, setSessionId] = useState("");
-  // Emotion state moved to after activeCharacter
+export default function LandingPage() {
+  const glowRef = useRef(null);
   
   useEffect(() => {
-    let storedSessionId = localStorage.getItem("mahiru_session_id");
-    if (!storedSessionId) {
-      storedSessionId = crypto.randomUUID();
-      localStorage.setItem("mahiru_session_id", storedSessionId);
-    }
-    setSessionId(storedSessionId);
-
-    const fetchHistory = async () => {
-      try {
-        const res = await fetch(`http://127.0.0.1:8000/chat/history?session_id=${storedSessionId}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.messages && data.messages.length > 0) {
-            setMessages(data.messages);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch chat history:", err);
-      }
-    };
-    
-    fetchHistory();
-  }, []);
-  
-  // Support for both characters
-  const [activeCharacter, setActiveCharacter] = useState<"mahiru" | "amane">("mahiru");
-  const [currentEmotion, setCurrentEmotion] = useState("waiting");
-  
-  // When active character changes, reset emotion to their default
-  useEffect(() => {
-    setCurrentEmotion(activeCharacter === "mahiru" ? "waiting" : "impressed");
-  }, [activeCharacter]);
-  
-  const getSpriteFilename = (character: "mahiru" | "amane", emotion: string) => {
-    // The backend now outputs the exact image filename based on the available files
-    // If the emotion is still 'neutral' from an old chat, map it to the defaults
-    if (emotion === "neutral") {
-      emotion = character === "mahiru" ? "waiting" : "impressed";
-    }
-    return `${character}_${emotion}.png`;
-  };
-  
-  const spriteRef = useRef(null);
-  const chatLogRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (chatLogRef.current) {
-      chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    if (spriteRef.current) {
+    if (glowRef.current) {
       anime({
-        targets: spriteRef.current,
-        translateY: [10, -10],
-        direction: 'alternate',
-        loop: true,
-        easing: 'easeInOutSine',
-        duration: 3500
+        targets: glowRef.current,
+        scale: [1, 1.2, 1],
+        opacity: [0.3, 0.6, 0.3],
+        rotate: '1turn',
+        duration: 20000,
+        easing: 'linear',
+        loop: true
       });
     }
   }, []);
-
-  const handleSend = async () => {
-    if (!input.trim() || isTyping || isLoading) return;
-
-    const userMessage = input;
-    setInput("");
-    
-    const newMessages = [...messages, { role: "user" as const, content: userMessage }];
-    setMessages(newMessages);
-    setIsLoading(true);
-
-    try {
-      const response = await fetch("http://localhost:8000/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          message: userMessage, 
-          difficulty: "hard", 
-          session_id: sessionId,
-          character: activeCharacter
-        }),
-      });
-      
-      const data = await response.json();
-      
-      setMessages(prev => [...prev, {
-        role: "coach",
-        content: data.coach_response || "...",
-        feedback: data.feedback,
-        emotion: data.emotion || "neutral"
-      }]);
-      
-      setCurrentEmotion(data.emotion || "neutral");
-      
-      setIsTyping(true);
-      
-      if (spriteRef.current) {
-        anime({
-          targets: spriteRef.current,
-          scale: [1, 1.05, 1],
-          duration: 400,
-          easing: 'easeOutQuad'
-        });
-      }
-      
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const latestFeedback = messages.filter(m => m.feedback).pop()?.feedback;
-  const currentDialogue = messages.length > 0 && messages[messages.length - 1].role === "coach" 
-    ? messages[messages.length - 1] 
-    : { role: "coach", content: "..." };
 
   return (
-    <div className="vn-container">
-      <div className="bg-vignette" />
-      
-      {/* Character Selector HUD */}
-      <div className="character-selector">
-        <button 
-          className={`char-btn mahiru ${activeCharacter === 'mahiru' ? 'active' : ''}`}
-          onClick={() => setActiveCharacter('mahiru')}
-        >
-          Mahiru
-        </button>
-        <button 
-          className={`char-btn amane ${activeCharacter === 'amane' ? 'active' : ''}`}
-          onClick={() => setActiveCharacter('amane')}
-        >
-          Amane
-        </button>
-      </div>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      position: 'relative',
+      overflow: 'hidden',
+      padding: '4rem 2rem'
+    }}>
+      {/* Background Animated Glow */}
+      <div ref={glowRef} style={{
+        position: 'absolute',
+        top: '10%',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '70vw',
+        height: '70vw',
+        background: 'radial-gradient(circle, var(--primary-color) 0%, transparent 60%)',
+        opacity: 0.1,
+        filter: 'blur(100px)',
+        zIndex: 0,
+        pointerEvents: 'none'
+      }} />
 
-      <div className="character-display">
+      {/* Navigation */}
+      <motion.nav 
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        style={{
+          display: 'flex',
+          gap: '2.5rem',
+          background: 'var(--glass-bg)',
+          padding: '1.2rem 3rem',
+          borderRadius: '100px',
+          border: '1px solid var(--glass-border)',
+          backdropFilter: 'var(--glass-blur)',
+          zIndex: 10,
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          alignItems: 'center'
+        }}
+      >
+        <div style={{ fontFamily: 'JetBrains Mono', fontWeight: 800, color: 'var(--primary-color)', marginRight: '2rem', fontSize: '1.2rem' }}>PROJECT MAHIRU</div>
+        <Link href="/dashboard" style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 600, transition: 'color 0.3s' }}>Dashboard</Link>
+        <Link href="/training" style={{ color: 'var(--secondary-color)', textDecoration: 'none', fontWeight: 600, transition: 'color 0.3s' }}>Start Training</Link>
+      </motion.nav>
+
+      {/* Hero Section */}
+      <motion.main 
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2, duration: 1, ease: "easeOut" }}
+        style={{
+          marginTop: '8rem',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          zIndex: 10,
+          maxWidth: '800px'
+        }}
+      >
         <motion.div 
-          key={activeCharacter} // Re-animate when character switches
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          style={{ 
+            fontFamily: 'JetBrains Mono', 
+            color: 'var(--secondary-color)', 
+            letterSpacing: '4px',
+            marginBottom: '1rem',
+            textTransform: 'uppercase',
+            fontWeight: 700
+          }}
         >
-          <div ref={spriteRef} className="character-sprite">
-            <img src={`/${getSpriteFilename(activeCharacter, currentEmotion)}`} alt={`${activeCharacter} ${currentEmotion}`} className="character-image" 
-              onError={(e) => {
-                // Fallback to neutral if specific emotion doesn't exist
-                const fallback = activeCharacter === "mahiru" ? "mahiru_waiting.png" : "amane_impressed.png";
-                if (!e.currentTarget.src.includes(fallback)) {
-                  e.currentTarget.src = `/${fallback}`;
-                } else {
-                  e.currentTarget.style.display = 'none';
-                }
-              }} 
-            />
-          </div>
+          No-Escapism Mandate Enabled
         </motion.div>
-      </div>
-
-      <div className="ui-layer">
         
-        <div className="dialogue-wrapper">
-          
-          {/* Chat History Log */}
-          {messages.length > 1 && (
-            <div className="chat-log" ref={chatLogRef}>
-              {messages.slice(0, -1).map((msg, i) => (
-                <div key={i} className={`log-entry ${msg.role} ${msg.role === 'coach' ? activeCharacter : ''}`}>
-                  <div className={`log-name ${msg.role} ${msg.role === 'coach' ? activeCharacter : ''}`}>
-                    {msg.role === 'coach' ? (activeCharacter === 'mahiru' ? 'Mahiru' : 'Amane') : 'You'}
-                  </div>
-                  <div>{msg.content}</div>
-                </div>
-              ))}
-            </div>
-          )}
+        <h1 style={{
+          fontSize: '4.5rem',
+          fontWeight: 800,
+          lineHeight: 1.1,
+          marginBottom: '2rem',
+          textShadow: '0 0 20px rgba(255,255,255,0.2)'
+        }}>
+          Master Your Confidence with <span style={{ color: 'var(--primary-color)', textShadow: '0 0 30px rgba(189, 0, 255, 0.5)' }}>Real-Time AI.</span>
+        </h1>
+        
+        <p style={{
+          fontSize: '1.2rem',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.6,
+          marginBottom: '3rem',
+          maxWidth: '600px'
+        }}>
+          Stop apologizing. Stop hesitating. Project Mahiru uses a strict RAG pipeline grounded in real HR rubrics to physically stop you from using passive language during interviews.
+        </p>
 
-          {/* Floating Name Tag */}
-          <div className={`name-tag ${currentDialogue.role === "coach" ? activeCharacter : "user"}`}>
-            {currentDialogue.role === "coach" ? (activeCharacter === "mahiru" ? "Mahiru" : "Amane") : "You"}
-          </div>
+        <div style={{ display: 'flex', gap: '1.5rem' }}>
+          <Link href="/training" style={{ textDecoration: 'none' }}>
+            <motion.button 
+              whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(189, 0, 255, 0.6)' }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                background: 'linear-gradient(135deg, var(--primary-color), var(--tertiary-color))',
+                color: 'white',
+                border: 'none',
+                padding: '1rem 3rem',
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontFamily: 'JetBrains Mono',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                boxShadow: '0 0 15px rgba(189, 0, 255, 0.4)'
+              }}
+            >
+              Start Training
+            </motion.button>
+          </Link>
           
-          <motion.div 
-            className={`dialogue-box ${activeCharacter}`}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-          >
-            <div className="dialogue-text">
-              {currentDialogue.role === "coach" && currentDialogue.content !== "..." ? (
-                <TypewriterText 
-                  text={currentDialogue.content} 
-                  onComplete={() => setIsTyping(false)} 
-                />
-              ) : (
-                <span>{currentDialogue.content}</span>
-              )}
-            </div>
-
-            <div className="input-container">
-              <input 
-                type="text" 
-                className="chat-input"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Type your response..."
-                disabled={isLoading || isTyping}
-              />
-              <button 
-                className="send-button"
-                onClick={handleSend}
-                disabled={isLoading || isTyping || !input.trim()}
-              >
-                {isLoading ? "..." : "Send"}
-              </button>
-            </div>
-          </motion.div>
+          <Link href="/dashboard" style={{ textDecoration: 'none' }}>
+            <motion.button 
+              whileHover={{ scale: 1.05, background: 'rgba(255,255,255,0.1)' }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                background: 'var(--surface-low)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--glass-border)',
+                padding: '1rem 3rem',
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontFamily: 'JetBrains Mono',
+                textTransform: 'uppercase',
+                letterSpacing: '1px'
+              }}
+            >
+              View Analytics
+            </motion.button>
+          </Link>
         </div>
+      </motion.main>
 
-        <motion.div 
-          className="analyst-panel"
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4, duration: 0.6 }}
-        >
-          <div className="analyst-header">Analyst Overlay</div>
-          
-          <div className="metric-row">
-            <span>Passiveness</span>
-            <span style={{ color: (latestFeedback?.passiveness_score || 0) > 5 ? 'var(--mahiru-color)' : 'var(--text-primary)' }}>
-              {latestFeedback ? latestFeedback.passiveness_score : 0}/10
-            </span>
-          </div>
-          <div className="metric-row">
-            <span>Apologies</span>
-            <span style={{ color: (latestFeedback?.apology_count || 0) > 0 ? 'var(--mahiru-color)' : 'var(--text-primary)' }}>
-              {latestFeedback ? latestFeedback.apology_count : 0}
-            </span>
-          </div>
-          <div className="metric-row">
-            <span>Hesitations</span>
-            <span style={{ color: (latestFeedback?.hesitation_count || 0) > 0 ? 'var(--mahiru-color)' : 'var(--text-primary)' }}>
-              {latestFeedback ? latestFeedback.hesitation_count : 0}
-            </span>
-          </div>
-          
-          <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            <strong style={{ color: 'var(--amane-color)' }}>COACH NOTES:</strong><br /><br />
-            {latestFeedback ? latestFeedback.feedback_notes : "Awaiting input..."}
-          </div>
-        </motion.div>
+      {/* Features Grid */}
+      <div style={{
+        display: 'flex',
+        gap: '2rem',
+        marginTop: '8rem',
+        zIndex: 10,
+        maxWidth: '1200px',
+        flexWrap: 'wrap',
+        justifyContent: 'center'
+      }}>
+        {[
+          { title: "RAG Pipeline", desc: "Responses grounded in real-world HR guidelines (STAR Method).", color: "var(--primary-color)" },
+          { title: "Instant Feedback", desc: "Live scoring on passiveness, hesitation, and unnecessary apologies.", color: "var(--secondary-color)" },
+          { title: "Dynamic Emotion", desc: "Characters react dynamically to your confidence level and choices.", color: "var(--tertiary-color)" }
+        ].map((feat, i) => (
+          <motion.div 
+            key={i}
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.8 + (i * 0.2) }}
+            whileHover={{ y: -10, borderColor: feat.color, boxShadow: `0 10px 30px ${feat.color}40` }}
+            style={{
+              background: 'var(--glass-bg)',
+              backdropFilter: 'var(--glass-blur)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: '16px',
+              padding: '2.5rem',
+              width: '320px',
+              textAlign: 'left',
+              transition: 'all 0.3s'
+            }}
+          >
+            <div style={{ 
+              width: '45px', 
+              height: '45px', 
+              borderRadius: '10px', 
+              background: `${feat.color}20`,
+              border: `1px solid ${feat.color}`,
+              marginBottom: '1.5rem'
+            }} />
+            <h3 style={{ fontSize: '1.3rem', marginBottom: '0.8rem', fontFamily: 'JetBrains Mono', color: feat.color }}>{feat.title}</h3>
+            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{feat.desc}</p>
+          </motion.div>
+        ))}
       </div>
     </div>
   );

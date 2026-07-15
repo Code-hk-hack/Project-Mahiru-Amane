@@ -1,12 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
 
 :root {
-  --glass-bg: rgba(0, 0, 0, 0.75);
-  --glass-border: rgba(255, 255, 255, 0.3);
-  --mahiru-color: #ff3399; /* Neon Pink */
-  --amane-color: #00f3ff;  /* Neon Cyan */
-  --text-primary: #ffffff;
-  --text-secondary: #cccccc;
+  /* StitchMCP Color Palette */
+  --surface-lowest: #0d0d18;
+  --surface-low: #1b1a26;
+  --surface: #12121d;
+  --primary-color: #bd00ff; /* Electric Violet */
+  --secondary-color: #00e0ff; /* Cyan Glitch */
+  --tertiary-color: #ff007a; /* Neon Pink */
+  --text-primary: #e3e0f1;
+  --text-secondary: #9d8ba0;
+  
+  /* Glassmorphism */
+  --glass-bg: rgba(20, 20, 35, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-blur: blur(20px);
+  
+  /* Character Mapping */
+  --mahiru-color: var(--tertiary-color);
+  --amane-color: var(--secondary-color);
 }
 
 * {
@@ -16,13 +28,13 @@
 }
 
 body {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: var(--text-primary);
-  /* Abstract Anime VN Background - using a cool halftone/grid pattern */
-  background: 
-    linear-gradient(rgba(10, 5, 20, 0.8), rgba(10, 5, 20, 0.9)),
-    url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiLz4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMiIgZmlsbD0icmdiYSg1MCwgNTAsIDEwMCwgMC4yKSIvPgo8L3N2Zz4=') center/40px 40px;
-  background-color: #0a0514;
+  background: var(--surface-lowest);
+  /* Cyberpunk nocturnal subtle grid */
+  background-image: linear-gradient(rgba(13, 13, 24, 0.8), rgba(13, 13, 24, 0.95)), 
+                    url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiLz4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMiIgZmlsbD0icmdiYSg4MiwgMCwgMTEzLCAwLjE1KSIvPgo8L3N2Zz4=');
+  background-size: 40px 40px;
   height: 100vh;
   overflow: hidden;
 }
@@ -34,11 +46,10 @@ body {
   position: relative;
 }
 
-/* Background overlay for drama */
 .bg-vignette {
   position: absolute;
   top: 0; left: 0; width: 100%; height: 100%;
-  box-shadow: inset 0 0 150px rgba(0,0,0,0.9);
+  box-shadow: inset 0 0 200px rgba(0,0,0,0.95);
   pointer-events: none;
   z-index: 0;
 }
@@ -54,29 +65,37 @@ body {
 }
 
 .char-btn {
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--surface-low);
   border: 1px solid var(--glass-border);
-  color: white;
-  padding: 0.5rem 1.5rem;
-  font-family: 'Space Grotesk', sans-serif;
+  color: var(--text-secondary);
+  padding: 0.6rem 1.8rem;
+  font-family: 'JetBrains Mono', monospace;
   text-transform: uppercase;
   font-weight: 700;
+  font-size: 0.85rem;
   letter-spacing: 2px;
   cursor: pointer;
-  clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%); /* Anime style slanted button */
-  transition: all 0.3s;
+  border-radius: 8px; /* StitchMCP soft tech */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.char-btn:hover {
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .char-btn.mahiru.active {
-  background: var(--mahiru-color);
+  background: rgba(255, 0, 122, 0.1);
+  color: var(--mahiru-color);
   border-color: var(--mahiru-color);
-  box-shadow: 0 0 20px rgba(255, 51, 153, 0.5);
+  box-shadow: 0 0 15px rgba(255, 0, 122, 0.3); /* Neon Bloom */
 }
 
 .char-btn.amane.active {
-  background: var(--amane-color);
+  background: rgba(0, 224, 255, 0.1);
+  color: var(--amane-color);
   border-color: var(--amane-color);
-  box-shadow: 0 0 20px rgba(0, 243, 255, 0.5);
+  box-shadow: 0 0 15px rgba(0, 224, 255, 0.3); /* Neon Bloom */
 }
 
 .character-display {
@@ -95,7 +114,8 @@ body {
   height: 90%;
   max-width: 600px;
   position: relative;
-  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.8));
+  /* Glow behind character instead of harsh shadow */
+  filter: drop-shadow(0 0 40px rgba(189, 0, 255, 0.15));
 }
 
 .character-image {
@@ -109,7 +129,7 @@ body {
   bottom: 0;
   left: 0;
   width: 100%;
-  padding: 2rem;
+  padding: 2.5rem;
   z-index: 10;
   display: flex;
   gap: 2rem;
@@ -127,40 +147,46 @@ body {
 /* Name Tag hover over dialogue box */
 .name-tag {
   align-self: flex-start;
-  padding: 0.5rem 2rem;
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 800;
-  font-size: 1.5rem;
+  padding: 0.4rem 1.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 0.9rem;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: white;
-  clip-path: polygon(5% 0, 100% 0, 95% 100%, 0% 100%);
-  margin-bottom: -15px; /* Overlap with dialogue box */
+  color: #fff;
+  border-radius: 6px;
+  margin-bottom: -12px;
+  margin-left: 24px;
   z-index: 2;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.6);
 }
 
 .name-tag.mahiru {
-  background: linear-gradient(135deg, #ff0055, var(--mahiru-color));
+  background: var(--mahiru-color);
+  box-shadow: 0 0 15px rgba(255, 0, 122, 0.4);
 }
 
 .name-tag.amane {
-  background: linear-gradient(135deg, #0088ff, var(--amane-color));
+  background: var(--amane-color);
+  color: #001f25;
+  box-shadow: 0 0 15px rgba(0, 224, 255, 0.4);
 }
 
 .name-tag.user {
-  background: linear-gradient(135deg, #444, #666);
+  background: var(--primary-color);
+  box-shadow: 0 0 15px rgba(189, 0, 255, 0.4);
 }
 
 .dialogue-box {
   background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 2px solid rgba(255,255,255,0.2);
-  border-top-right-radius: 15px;
-  border-bottom-left-radius: 15px;
-  border-bottom-right-radius: 15px;
-  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.8);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  /* Top-Light border simulation */
+  border-top-color: rgba(255, 255, 255, 0.25);
+  border-left-color: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
   padding: 2.5rem;
   min-height: 220px;
   display: flex;
@@ -170,15 +196,12 @@ body {
   z-index: 1;
 }
 
-.dialogue-box.mahiru { border-color: rgba(255, 51, 153, 0.4); }
-.dialogue-box.amane { border-color: rgba(0, 243, 255, 0.4); }
-
 .dialogue-text {
-  font-size: 1.5rem;
-  line-height: 1.6;
+  font-size: 1.25rem;
+  line-height: 1.7;
   font-weight: 400;
   min-height: 80px;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
 /* Chat Log for History */
@@ -197,46 +220,50 @@ body {
 }
 
 .log-entry {
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(20, 20, 35, 0.8);
   padding: 1rem;
   border-radius: 8px;
-  border-left: 4px solid var(--glass-border);
+  border-left: 2px solid var(--glass-border);
+  font-size: 0.95rem;
 }
-.log-entry.coach.mahiru { border-left-color: var(--mahiru-color); }
-.log-entry.coach.amane { border-left-color: var(--amane-color); }
-.log-entry.user { border-left-color: #888; }
+.log-entry.coach.mahiru { border-left: 3px solid var(--mahiru-color); }
+.log-entry.coach.amane { border-left: 3px solid var(--amane-color); }
+.log-entry.user { border-left: 3px solid var(--primary-color); }
 
 .log-name {
-  font-size: 0.8rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 1px;
-  margin-bottom: 0.3rem;
-  font-weight: bold;
+  margin-bottom: 0.4rem;
+  font-weight: 700;
 }
 .log-name.coach.mahiru { color: var(--mahiru-color); }
 .log-name.coach.amane { color: var(--amane-color); }
-.log-name.user { color: #aaa; }
+.log-name.user { color: var(--primary-color); }
 
 .analyst-panel {
   width: 320px;
   background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-top-color: rgba(255, 255, 255, 0.25);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  border-radius: 12px;
+  border-radius: 16px;
 }
 
 .analyst-header {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 1rem;
-  color: #ffaa00;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--secondary-color);
   text-transform: uppercase;
   letter-spacing: 2px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
-  padding-bottom: 0.5rem;
+  padding-bottom: 0.75rem;
+  font-weight: 700;
 }
 
 .metric-row {
@@ -245,6 +272,7 @@ body {
   align-items: center;
   padding: 0.5rem 0;
   font-weight: 600;
+  font-size: 0.95rem;
 }
 
 .input-container {
@@ -255,42 +283,46 @@ body {
 
 .chat-input {
   flex: 1;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 6px;
+  background: rgba(13, 13, 24, 0.8);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
   padding: 1rem 1.5rem;
-  color: white;
+  color: var(--text-primary);
   font-family: inherit;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   outline: none;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
 }
 
 .chat-input:focus {
-  border-color: #fff;
-  box-shadow: 0 0 10px rgba(255,255,255,0.2);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 15px rgba(189, 0, 255, 0.2);
 }
 
 .send-button {
-  background: white;
-  color: black;
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: #001f25;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 0 2.5rem;
   font-weight: 800;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'JetBrains Mono', monospace;
   letter-spacing: 1px;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 15px rgba(189, 0, 255, 0.4);
 }
 
 .send-button:hover:not(:disabled) {
-  background: #ddd;
-  transform: scale(1.02);
+  transform: translateY(-2px);
+  box-shadow: 0 0 25px rgba(0, 224, 255, 0.6);
 }
 
 .send-button:disabled {
-  opacity: 0.5;
+  background: var(--surface-low);
+  color: var(--text-secondary);
+  box-shadow: none;
   cursor: not-allowed;
+  transform: none;
 }
