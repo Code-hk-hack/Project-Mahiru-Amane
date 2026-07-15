@@ -28,9 +28,19 @@ class AnalystAgent:
         """
         Analyzes the user's message for passive language and boundary setting.
         """
+        # RAG (Retrieval-Augmented Generation) Integration
+        # Load HR rubrics to ground the AI in actual interview practices
+        hr_knowledge = "{}"
+        try:
+            with open("hr_knowledge_base.json", "r") as f:
+                hr_knowledge = f.read()
+        except Exception:
+            pass
+
         system_prompt = (
-            "You are an Analyst Agent for a social confidence training simulator. "
+            "You are an Analyst Agent for a social confidence and interview training simulator. "
             "Your job is to evaluate the user's input for passiveness, excessive apologies, and hesitation. "
+            f"Base your evaluation strictly on the following HR Interview Guidelines and Rubrics: {hr_knowledge}. "
             "Return a strictly valid JSON object matching the requested schema. "
             "JSON Format: {\"passiveness_score\": int, \"apology_count\": int, \"hesitation_count\": int, \"feedback_notes\": \"string\"}"
         )
@@ -78,7 +88,7 @@ class CoachAgent:
             ensure_session_exists(db, session_id)
             
         if character.lower() == "amane":
-            emotions_list = "impressed, impressed_starlted, sad, sad_notimpressed, shy, sleepy, small_smile, starlted, startled_happy_joy"
+            emotions_list = "impressed, impressed_starlted, sad, sad_notimpressed, shy, sleepy, small_smile, starlted, startled_happy_joy, happy"
             default_emotion = "impressed"
         else:
             emotions_list = "waiting, waiting_2, happy, little_happy, very_happy, angry, concerned, sleepy, thinking"
