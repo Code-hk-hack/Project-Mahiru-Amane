@@ -13,8 +13,8 @@ client = Groq(
     api_key=api_key or "MISSING_KEY",
 )
 
-# Using LLaMA 3 8B optimized for Groq LPUs
-MODEL = os.environ.get("MODEL_NAME", "llama3-8b-8192") 
+# Using LLaMA 3.1 8B optimized for Groq LPUs
+MODEL = os.environ.get("MODEL_NAME", "llama-3.1-8b-instant") 
 
 class AnalystFeedback(BaseModel):
     passiveness_score: int = Field(..., description="Score from 0 to 10 on how passive the user's language is.")
