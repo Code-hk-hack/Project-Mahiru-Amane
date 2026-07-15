@@ -159,17 +159,66 @@ export default function TrainingPage() {
         }),
       });
       
-      const data = await response.json();
+      if (!response.body) return;
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      let currentResponse = "";
+      let currentFeedback = undefined;
+      let currentEmotion = "neutral";
       
       setMessages(prev => [...prev, {
         role: "coach",
-        content: data.coach_response || "...",
-        feedback: data.feedback,
-        emotion: data.emotion || "neutral"
+        content: "",
+        emotion: "neutral"
       }]);
-      
-      setCurrentEmotion(data.emotion || "neutral");
       setIsTyping(true);
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              if (data.type === 'feedback') {
+                currentFeedback = data.feedback;
+                setMessages(prev => {
+                  const newMsgs = [...prev];
+                  newMsgs[newMsgs.length - 1].feedback = currentFeedback;
+                  return newMsgs;
+                });
+              } else if (data.type === 'chunk') {
+                currentResponse += data.content;
+                setMessages(prev => {
+                  const newMsgs = [...prev];
+                  newMsgs[newMsgs.length - 1].content = currentResponse;
+                  return newMsgs;
+                });
+              } else if (data.type === 'done') {
+                currentEmotion = data.emotion;
+                setMessages(prev => {
+                  const newMsgs = [...prev];
+                  newMsgs[newMsgs.length - 1].emotion = currentEmotion;
+                  return newMsgs;
+                });
+                setCurrentEmotion(currentEmotion);
+              } else if (data.type === 'error') {
+                console.error("Stream error:", data.content);
+              }
+            } catch (e) {
+              // Ignore incomplete JSON chunks from partial splits
+            }
+          }
+        }
+      }
+      
     } catch (err) {
       console.error(err);
     } finally {

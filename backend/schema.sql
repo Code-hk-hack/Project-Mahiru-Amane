@@ -1,15 +1,5 @@
 -- Project Mahiru/Amane Database Schema
 
--- Enable vector extension for LangChain RAG Memory
-CREATE EXTENSION IF NOT EXISTS vector;
-
--- 0. Knowledge Base (HR Rubrics)
-CREATE TABLE IF NOT EXISTS hr_rubrics (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    content TEXT NOT NULL,
-    metadata JSONB,
-    embedding vector(384) -- Matches HuggingFace all-MiniLM-L6-v2 dimension
-);
 -- 1. Users Table
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

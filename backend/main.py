@@ -47,18 +47,30 @@ def health_check():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/chat", response_model=ChatResponse)
+from fastapi.responses import StreamingResponse
+import json
+
+@app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
+    # Step 1: Analyst scores the user's message (this happens instantly)
     try:
-        # Step 1: Analyst scores the user's message
         feedback = AnalystAgent.analyze(request.message)
-        
-        # Step 2: Coach generates a response incorporating the feedback
-        response, emotion = await CoachAgent.respond(request.message, feedback, request.difficulty, request.session_id, request.character)
-        
-        return ChatResponse(coach_response=response, feedback=feedback, emotion=emotion)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+    # Step 2: Stream the Coach response
+    async def event_generator():
+        # First yield the analyst feedback so the UI can update it immediately
+        yield f"data: {json.dumps({'type': 'feedback', 'feedback': feedback.model_dump()})}\n\n"
+        
+        # Then yield the streamed coach response
+        try:
+            async for chunk in CoachAgent.stream_respond(request.message, feedback, request.difficulty, request.session_id, request.character):
+                yield chunk
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.get("/chat/history")
 def get_chat_history(session_id: str):
