@@ -15,6 +15,7 @@ interface Message {
   role: "user" | "coach";
   content: string;
   feedback?: AnalystFeedback;
+  emotion?: string;
 }
 
 const TypewriterText = ({ text, onComplete }: { text: string, onComplete?: () => void }) => {
@@ -45,6 +46,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState("");
+  const [currentEmotion, setCurrentEmotion] = useState("neutral");
   
   useEffect(() => {
     // Generate a random session ID on component mount
@@ -53,6 +55,30 @@ export default function Home() {
   
   // Support for both characters
   const [activeCharacter, setActiveCharacter] = useState<"mahiru" | "amane">("mahiru");
+  
+  const getSpriteFilename = (character: "mahiru" | "amane", emotion: string) => {
+    if (character === "mahiru") {
+      switch (emotion) {
+        case "happy": return "mahiru_happy.png";
+        case "angry": return "mahiru_angry.png";
+        case "sad": return "mahiru_concerned.png";
+        case "surprised": return "mahiru_waiting_2.png";
+        case "shy": return "mahiru_thinking.png";
+        case "sleepy": return "mahiru_sleepy.png";
+        default: return "mahiru_waiting.png";
+      }
+    } else {
+      switch (emotion) {
+        case "happy": return "amane_small_smile.png";
+        case "angry": return "amane_sad_notimpressed.png";
+        case "sad": return "amane_sad.png";
+        case "surprised": return "amane_starlted.png"; 
+        case "shy": return "amane_shy.png";
+        case "sleepy": return "amane_sleepy.png";
+        default: return "amane_impressed.png";
+      }
+    }
+  };
   
   const spriteRef = useRef(null);
   const chatLogRef = useRef<HTMLDivElement>(null);
@@ -102,8 +128,11 @@ export default function Home() {
       setMessages(prev => [...prev, {
         role: "coach",
         content: data.coach_response || "...",
-        feedback: data.feedback
+        feedback: data.feedback,
+        emotion: data.emotion || "neutral"
       }]);
+      
+      setCurrentEmotion(data.emotion || "neutral");
       
       setIsTyping(true);
       
@@ -156,11 +185,15 @@ export default function Home() {
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
           <div ref={spriteRef} className="character-sprite">
-            {/* Loads either mahiru_sprite.png or amane_sprite.png */}
-            <img src={`/${activeCharacter}_sprite.png`} alt={activeCharacter} className="character-image" 
+            <img src={`/${getSpriteFilename(activeCharacter, currentEmotion)}`} alt={`${activeCharacter} ${currentEmotion}`} className="character-image" 
               onError={(e) => {
-                // Fallback if image not generated yet
-                e.currentTarget.style.display = 'none';
+                // Fallback to neutral if specific emotion doesn't exist
+                const fallback = getSpriteFilename(activeCharacter, "neutral");
+                if (!e.currentTarget.src.includes(fallback)) {
+                  e.currentTarget.src = `/${fallback}`;
+                } else {
+                  e.currentTarget.style.display = 'none';
+                }
               }} 
             />
           </div>

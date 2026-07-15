@@ -32,6 +32,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     coach_response: str
     feedback: AnalystFeedback
+    emotion: str = "neutral"
 
 @app.get("/")
 def read_root():
@@ -52,8 +53,8 @@ async def chat_endpoint(request: ChatRequest):
         feedback = AnalystAgent.analyze(request.message)
         
         # Step 2: Coach generates a response incorporating the feedback
-        response = await CoachAgent.respond(request.message, feedback, request.difficulty, request.session_id)
+        response, emotion = await CoachAgent.respond(request.message, feedback, request.difficulty, request.session_id)
         
-        return ChatResponse(coach_response=response, feedback=feedback)
+        return ChatResponse(coach_response=response, feedback=feedback, emotion=emotion)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

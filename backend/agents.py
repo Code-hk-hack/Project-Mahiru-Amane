@@ -67,7 +67,7 @@ def ensure_session_exists(db, session_id: str):
 
 class CoachAgent:
     @staticmethod
-    async def respond(user_message: str, analyst_feedback: AnalystFeedback, difficulty: str = "neutral", session_id: str = None) -> str:
+    async def respond(user_message: str, analyst_feedback: AnalystFeedback, difficulty: str = "neutral", session_id: str = None) -> tuple[str, str]:
         """
         Generates the Mahiru/Amane response incorporating the analyst feedback, executing tools, and using conversation history.
         """
@@ -90,6 +90,12 @@ The Analyst Agent has provided this structural feedback on the user's last messa
 
 Address the user's message naturally in character, but weave in a harsh but constructive critique based on the Analyst's notes.
 If you need to perform an action for the user (like sending an email or checking a calendar), you MUST use the provided tools.
+
+CRITICAL INSTRUCTION: You MUST format your final response to the user as a valid JSON object with the following schema:
+{{
+  "response": "Your spoken dialogue here...",
+  "emotion": "neutral" // Must be one of: neutral, happy, angry, sad, surprised, shy, sleepy
+}}
 """
         messages = [
             {"role": "system", "content": system_prompt}
@@ -140,6 +146,7 @@ If you need to perform an action for the user (like sending an email or checking
             completion = client.chat.completions.create(
                 model=MODEL,
                 messages=messages,
+                response_format={"type": "json_object"},
                 **kwargs
             )
             
@@ -147,8 +154,17 @@ If you need to perform an action for the user (like sending an email or checking
             messages.append(response_message)
             
             if not response_message.tool_calls:
-                final_response = response_message.content or "..."
+                final_response = response_message.content or "{}"
                 
+                # Parse JSON for response and emotion
+                try:
+                    data = json.loads(final_response)
+                    coach_text = data.get("response", "...")
+                    emotion = data.get("emotion", "neutral")
+                except json.JSONDecodeError:
+                    coach_text = final_response
+                    emotion = "neutral"
+
                 # Save to database
                 if session_id and session_id != "default-session":
                     try:
@@ -167,12 +183,12 @@ If you need to perform an action for the user (like sending an email or checking
                         db.table('messages').insert({
                             "session_id": session_id,
                             "role": "coach",
-                            "content": final_response
+                            "content": coach_text
                         }).execute()
                     except Exception as e:
                         print(f"Failed to save messages to DB: {e}")
 
-                return final_response
+                return coach_text, emotion
             
             # Execute tool calls
             for tool_call in response_message.tool_calls:
@@ -198,4 +214,4 @@ If you need to perform an action for the user (like sending an email or checking
                     "content": tool_result_text
                 })
         
-        return "I tried to fulfill your request but it took too many steps."
+        return "I tried to fulfill your request but it took too many steps.", "sad"
