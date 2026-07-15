@@ -1,73 +1,26 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import anime from "animejs";
 import Link from "next/link";
+import { Spotlight } from "@/components/ui/Spotlight";
+import { HoverBorderGradient } from "@/components/ui/HoverBorderGradient";
+import { ArrowRight, Activity, Zap, Brain } from "lucide-react";
 
 export default function LandingPage() {
-  const glowRef = useRef(null);
-  
-  useEffect(() => {
-    if (glowRef.current) {
-      anime({
-        targets: glowRef.current,
-        scale: [1, 1.2, 1],
-        opacity: [0.3, 0.6, 0.3],
-        rotate: '1turn',
-        duration: 20000,
-        easing: 'linear',
-        loop: true
-      });
-    }
-  }, []);
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      position: 'relative',
-      overflow: 'hidden',
-      padding: '4rem 2rem'
-    }}>
-      {/* Background Animated Glow */}
-      <div ref={glowRef} style={{
-        position: 'absolute',
-        top: '10%',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '70vw',
-        height: '70vw',
-        background: 'radial-gradient(circle, var(--primary-color) 0%, transparent 60%)',
-        opacity: 0.1,
-        filter: 'blur(100px)',
-        zIndex: 0,
-        pointerEvents: 'none'
-      }} />
+    <div className="min-h-screen flex flex-col items-center relative overflow-hidden bg-[#0d0d18] text-white">
+      <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="var(--primary-color)" />
 
       {/* Navigation */}
       <motion.nav 
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        style={{
-          display: 'flex',
-          gap: '2.5rem',
-          background: 'var(--glass-bg)',
-          padding: '1.2rem 3rem',
-          borderRadius: '100px',
-          border: '1px solid var(--glass-border)',
-          backdropFilter: 'var(--glass-blur)',
-          zIndex: 10,
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-          alignItems: 'center'
-        }}
+        className="flex gap-10 bg-white/5 px-12 py-5 rounded-full border border-white/10 backdrop-blur-xl z-10 shadow-2xl items-center mt-8 w-fit mx-auto"
       >
-        <div style={{ fontFamily: 'JetBrains Mono', fontWeight: 800, color: 'var(--primary-color)', marginRight: '2rem', fontSize: '1.2rem' }}>PROJECT MAHIRU</div>
-        <Link href="/dashboard" style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 600, transition: 'color 0.3s' }}>Dashboard</Link>
-        <Link href="/training" style={{ color: 'var(--secondary-color)', textDecoration: 'none', fontWeight: 600, transition: 'color 0.3s' }}>Start Training</Link>
+        <div className="font-[family-name:JetBrains_Mono] font-extrabold text-[var(--primary-color)] mr-8 text-xl tracking-wider">PROJECT MAHIRU</div>
+        <Link href="/dashboard" className="text-white/80 hover:text-white font-semibold transition-colors">Dashboard</Link>
+        <Link href="/training" className="text-[var(--secondary-color)] hover:text-cyan-300 font-semibold transition-colors">Start Training</Link>
       </motion.nav>
 
       {/* Hero Section */}
@@ -75,142 +28,69 @@ export default function LandingPage() {
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.2, duration: 1, ease: "easeOut" }}
-        style={{
-          marginTop: '8rem',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          textAlign: 'center',
-          zIndex: 10,
-          maxWidth: '800px'
-        }}
+        className="mt-32 flex flex-col items-center text-center z-10 max-w-4xl px-4"
       >
         <motion.div 
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.5 }}
-          style={{ 
-            fontFamily: 'JetBrains Mono', 
-            color: 'var(--secondary-color)', 
-            letterSpacing: '4px',
-            marginBottom: '1rem',
-            textTransform: 'uppercase',
-            fontWeight: 700
-          }}
+          className="font-[family-name:JetBrains_Mono] text-[var(--secondary-color)] tracking-[4px] mb-4 uppercase font-bold text-sm bg-[var(--secondary-color)]/10 px-4 py-2 rounded-full border border-[var(--secondary-color)]/20"
         >
           No-Escapism Mandate Enabled
         </motion.div>
         
-        <h1 style={{
-          fontSize: '4.5rem',
-          fontWeight: 800,
-          lineHeight: 1.1,
-          marginBottom: '2rem',
-          textShadow: '0 0 20px rgba(255,255,255,0.2)'
-        }}>
-          Master Your Confidence with <span style={{ color: 'var(--primary-color)', textShadow: '0 0 30px rgba(189, 0, 255, 0.5)' }}>Real-Time AI.</span>
+        <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-8 drop-shadow-2xl">
+          Master Your Confidence with <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary-color)] to-[var(--secondary-color)]">Real-Time AI.</span>
         </h1>
         
-        <p style={{
-          fontSize: '1.2rem',
-          color: 'var(--text-secondary)',
-          lineHeight: 1.6,
-          marginBottom: '3rem',
-          maxWidth: '600px'
-        }}>
+        <p className="text-xl text-gray-400 leading-relaxed mb-12 max-w-2xl font-light">
           Stop apologizing. Stop hesitating. Project Mahiru uses a strict RAG pipeline grounded in real HR rubrics to physically stop you from using passive language during interviews.
         </p>
 
-        <div style={{ display: 'flex', gap: '1.5rem' }}>
-          <Link href="/training" style={{ textDecoration: 'none' }}>
-            <motion.button 
-              whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(189, 0, 255, 0.6)' }}
-              whileTap={{ scale: 0.95 }}
-              style={{
-                background: 'linear-gradient(135deg, var(--primary-color), var(--tertiary-color))',
-                color: 'white',
-                border: 'none',
-                padding: '1rem 3rem',
-                fontSize: '1.1rem',
-                fontWeight: 700,
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontFamily: 'JetBrains Mono',
-                textTransform: 'uppercase',
-                letterSpacing: '1px',
-                boxShadow: '0 0 15px rgba(189, 0, 255, 0.4)'
-              }}
+        <div className="flex gap-6">
+          <Link href="/training">
+            <HoverBorderGradient
+              containerClassName="rounded-full"
+              as="button"
+              className="bg-black text-white flex items-center space-x-2 px-8 py-3 text-lg font-[family-name:JetBrains_Mono] font-bold uppercase tracking-wider"
             >
-              Start Training
-            </motion.button>
+              <span>Start Training</span>
+              <ArrowRight className="w-5 h-5" />
+            </HoverBorderGradient>
           </Link>
           
-          <Link href="/dashboard" style={{ textDecoration: 'none' }}>
-            <motion.button 
-              whileHover={{ scale: 1.05, background: 'rgba(255,255,255,0.1)' }}
-              whileTap={{ scale: 0.95 }}
-              style={{
-                background: 'var(--surface-low)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--glass-border)',
-                padding: '1rem 3rem',
-                fontSize: '1.1rem',
-                fontWeight: 700,
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontFamily: 'JetBrains Mono',
-                textTransform: 'uppercase',
-                letterSpacing: '1px'
-              }}
-            >
+          <Link href="/dashboard">
+            <button className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full transition-all duration-300 text-white font-bold font-[family-name:JetBrains_Mono] uppercase tracking-wider text-lg">
               View Analytics
-            </motion.button>
+            </button>
           </Link>
         </div>
       </motion.main>
 
       {/* Features Grid */}
-      <div style={{
-        display: 'flex',
-        gap: '2rem',
-        marginTop: '8rem',
-        zIndex: 10,
-        maxWidth: '1200px',
-        flexWrap: 'wrap',
-        justifyContent: 'center'
-      }}>
+      <div className="flex flex-wrap justify-center gap-8 mt-40 z-10 max-w-7xl px-8 pb-32">
         {[
-          { title: "RAG Pipeline", desc: "Responses grounded in real-world HR guidelines (STAR Method).", color: "var(--primary-color)" },
-          { title: "Instant Feedback", desc: "Live scoring on passiveness, hesitation, and unnecessary apologies.", color: "var(--secondary-color)" },
-          { title: "Dynamic Emotion", desc: "Characters react dynamically to your confidence level and choices.", color: "var(--tertiary-color)" }
+          { title: "RAG Pipeline", desc: "Responses grounded in real-world HR guidelines (STAR Method).", color: "var(--primary-color)", icon: <Brain className="w-6 h-6 text-[#bd00ff]" /> },
+          { title: "Instant Feedback", desc: "Live scoring on passiveness, hesitation, and unnecessary apologies.", color: "var(--secondary-color)", icon: <Activity className="w-6 h-6 text-[#00e0ff]" /> },
+          { title: "Dynamic Emotion", desc: "Characters react dynamically to your confidence level and choices.", color: "var(--tertiary-color)", icon: <Zap className="w-6 h-6 text-[#ff007a]" /> }
         ].map((feat, i) => (
           <motion.div 
             key={i}
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.8 + (i * 0.2) }}
-            whileHover={{ y: -10, borderColor: feat.color, boxShadow: `0 10px 30px ${feat.color}40` }}
-            style={{
-              background: 'var(--glass-bg)',
-              backdropFilter: 'var(--glass-blur)',
-              border: '1px solid var(--glass-border)',
-              borderRadius: '16px',
-              padding: '2.5rem',
-              width: '320px',
-              textAlign: 'left',
-              transition: 'all 0.3s'
-            }}
+            whileHover={{ y: -10 }}
+            className="group relative bg-white/5 backdrop-blur-xl border border-white/10 hover:border-white/20 rounded-2xl p-8 w-[350px] text-left transition-all duration-300 cursor-pointer"
           >
-            <div style={{ 
-              width: '45px', 
-              height: '45px', 
-              borderRadius: '10px', 
-              background: `${feat.color}20`,
-              border: `1px solid ${feat.color}`,
-              marginBottom: '1.5rem'
-            }} />
-            <h3 style={{ fontSize: '1.3rem', marginBottom: '0.8rem', fontFamily: 'JetBrains Mono', color: feat.color }}>{feat.title}</h3>
-            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{feat.desc}</p>
+            {/* Hover Glow */}
+            <div className="absolute inset-0 bg-gradient-to-r opacity-0 group-hover:opacity-10 transition-opacity duration-500 rounded-2xl" style={{ backgroundImage: `linear-gradient(to right, ${feat.color}, transparent)` }} />
+            
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 bg-black/50 border" style={{ borderColor: `${feat.color}40` }}>
+              {feat.icon}
+            </div>
+            <h3 className="text-xl mb-3 font-[family-name:JetBrains_Mono] font-bold" style={{ color: feat.color }}>{feat.title}</h3>
+            <p className="text-gray-400 leading-relaxed font-light">{feat.desc}</p>
           </motion.div>
         ))}
       </div>

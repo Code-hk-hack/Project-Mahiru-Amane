@@ -3,6 +3,8 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Meteors } from "@/components/ui/MeteorEffect";
+import { Activity, TrendingUp, AlertCircle } from "lucide-react";
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
@@ -15,9 +17,7 @@ export default function DashboardPage() {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
+      transition: { staggerChildren: 0.1 }
     }
   };
 
@@ -27,51 +27,21 @@ export default function DashboardPage() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '2rem 4rem',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      {/* Background glow */}
-      <div style={{
-        position: 'absolute',
-        top: '-10%',
-        right: '-10%',
-        width: '50vw',
-        height: '50vw',
-        background: 'radial-gradient(circle, var(--secondary-color) 0%, transparent 70%)',
-        opacity: 0.05,
-        filter: 'blur(80px)',
-        zIndex: 0,
-        pointerEvents: 'none'
-      }} />
+    <div className="min-h-screen flex flex-col p-8 md:p-16 relative overflow-hidden bg-[#0d0d18] text-white">
+      {/* Meteor Background */}
+      <div className="absolute inset-0 z-0">
+        <Meteors number={30} />
+      </div>
 
       {/* Navigation */}
       <motion.nav 
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        style={{
-          display: 'flex',
-          gap: '2.5rem',
-          background: 'var(--glass-bg)',
-          padding: '1.2rem 3rem',
-          borderRadius: '100px',
-          border: '1px solid var(--glass-border)',
-          backdropFilter: 'var(--glass-blur)',
-          zIndex: 10,
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-          alignItems: 'center',
-          marginBottom: '3rem',
-          width: 'fit-content',
-          margin: '0 auto 3rem auto'
-        }}
+        className="flex gap-10 bg-white/5 px-10 py-4 rounded-full border border-white/10 backdrop-blur-xl z-10 shadow-2xl items-center mb-16 w-fit mx-auto"
       >
-        <div style={{ fontFamily: 'JetBrains Mono', fontWeight: 800, color: 'var(--primary-color)', marginRight: '2rem', fontSize: '1.2rem' }}>PROJECT MAHIRU</div>
-        <Link href="/" style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 600 }}>Home</Link>
-        <Link href="/training" style={{ color: 'var(--secondary-color)', textDecoration: 'none', fontWeight: 600 }}>Start Training</Link>
+        <div className="font-[family-name:JetBrains_Mono] font-extrabold text-[var(--primary-color)] mr-8 text-xl tracking-wider">PROJECT MAHIRU</div>
+        <Link href="/" className="text-white/80 hover:text-white font-semibold transition-colors">Home</Link>
+        <Link href="/training" className="text-[var(--secondary-color)] hover:text-cyan-300 font-semibold transition-colors">Start Training</Link>
       </motion.nav>
 
       {/* Main Content */}
@@ -79,127 +49,61 @@ export default function DashboardPage() {
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        style={{ zIndex: 1, maxWidth: '1200px', margin: '0 auto', width: '100%' }}
+        className="z-10 w-full max-w-6xl mx-auto"
       >
-        <motion.h1 variants={itemVariants} style={{ fontSize: '2.5rem', marginBottom: '2rem', fontFamily: 'JetBrains Mono' }}>
-          Performance <span style={{ color: 'var(--secondary-color)' }}>Analytics</span>
+        <motion.h1 variants={itemVariants} className="text-4xl mb-12 font-[family-name:JetBrains_Mono] font-bold">
+          Performance <span className="text-[var(--secondary-color)]">Analytics</span>
         </motion.h1>
 
         {/* Top Metric Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem', marginBottom: '3rem' }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
           {[
-            { label: "Avg. Passiveness Score", value: "3.2", highlight: "var(--primary-color)", trend: "-15% (Improving)" },
-            { label: "Total Apologies", value: "14", highlight: "var(--secondary-color)", trend: "4 this week" },
-            { label: "Hesitation Markers", value: "89", highlight: "var(--tertiary-color)", trend: "Mostly 'I guess'" }
+            { label: "Avg. Passiveness Score", value: "3.2", highlight: "var(--primary-color)", icon: <Activity />, trend: "-15% (Improving)" },
+            { label: "Total Apologies", value: "14", highlight: "var(--secondary-color)", icon: <AlertCircle />, trend: "4 this week" },
+            { label: "Hesitation Markers", value: "89", highlight: "var(--tertiary-color)", icon: <TrendingUp />, trend: "Mostly 'I guess'" }
           ].map((metric, idx) => (
-            <motion.div key={idx} variants={itemVariants} style={{
-              background: 'var(--glass-bg)',
-              backdropFilter: 'var(--glass-blur)',
-              border: '1px solid var(--glass-border)',
-              borderRadius: '16px',
-              padding: '2rem',
-              boxShadow: `0 10px 30px ${metric.highlight}20`,
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: metric.highlight }} />
-              <div style={{ color: 'var(--text-secondary)', fontFamily: 'JetBrains Mono', fontSize: '0.9rem', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
-                {metric.label}
+            <motion.div key={idx} variants={itemVariants} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-1 h-full transition-all duration-300 group-hover:w-2" style={{ background: metric.highlight }} />
+              
+              <div className="flex justify-between items-start mb-4">
+                <div className="font-[family-name:JetBrains_Mono] text-sm text-gray-400 uppercase tracking-widest">
+                  {metric.label}
+                </div>
+                <div className="text-gray-500">{metric.icon}</div>
               </div>
-              <div style={{ fontSize: '3.5rem', fontWeight: 800, color: 'white', marginBottom: '0.5rem' }}>
+              
+              <div className="text-6xl font-extrabold text-white mb-4">
                 {metric.value}
               </div>
-              <div style={{ color: metric.highlight, fontWeight: 600, fontSize: '0.9rem' }}>
+              <div className="font-bold text-sm" style={{ color: metric.highlight }}>
                 {metric.trend}
               </div>
             </motion.div>
           ))}
         </div>
 
-        {/* Main Chart Area (Mockup) */}
-        <motion.div variants={itemVariants} style={{
-          background: 'var(--glass-bg)',
-          backdropFilter: 'var(--glass-blur)',
-          border: '1px solid var(--glass-border)',
-          borderRadius: '16px',
-          padding: '2rem',
-          marginBottom: '3rem'
-        }}>
-          <h2 style={{ fontFamily: 'JetBrains Mono', fontSize: '1.2rem', marginBottom: '2rem', color: 'var(--text-secondary)' }}>Passiveness Score Over Time</h2>
+        {/* Main Chart Area */}
+        <motion.div variants={itemVariants} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-10 mb-16">
+          <h2 className="font-[family-name:JetBrains_Mono] text-xl mb-10 text-gray-400">Passiveness Score Over Time</h2>
           
-          <div style={{ height: '250px', display: 'flex', alignItems: 'flex-end', gap: '10px', paddingBottom: '20px', borderBottom: '1px solid var(--glass-border)' }}>
+          <div className="h-[300px] flex items-end gap-4 pb-8 border-b border-white/10">
             {[8, 7, 9, 6, 5, 5, 4, 3, 2, 3, 1, 2].map((val, i) => (
-              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+              <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
                 <motion.div 
                   initial={{ height: 0 }}
                   animate={{ height: mounted ? `${val * 10}%` : 0 }}
-                  transition={{ duration: 1, delay: 0.5 + (i * 0.05) }}
-                  style={{
-                    width: '100%',
-                    background: `linear-gradient(to top, var(--primary-color), var(--secondary-color))`,
-                    borderRadius: '4px 4px 0 0',
-                    opacity: 0.8,
-                    boxShadow: '0 0 10px rgba(0, 224, 255, 0.4)'
-                  }}
+                  transition={{ duration: 1.5, type: "spring", bounce: 0.4, delay: 0.5 + (i * 0.05) }}
+                  className="w-full rounded-t-lg bg-gradient-to-t from-[var(--primary-color)] to-[var(--secondary-color)] opacity-90 hover:opacity-100 transition-opacity cursor-pointer shadow-[0_0_20px_rgba(0,224,255,0.3)]"
                 />
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', color: 'var(--text-secondary)', fontFamily: 'JetBrains Mono', fontSize: '0.8rem' }}>
+          <div className="flex justify-between mt-6 text-gray-400 font-[family-name:JetBrains_Mono] text-sm tracking-widest">
             <span>Session 1</span>
             <span>Session 6</span>
             <span>Session 12 (Current)</span>
           </div>
         </motion.div>
-
-        {/* Recent Sessions Table */}
-        <motion.div variants={itemVariants} style={{
-          background: 'var(--glass-bg)',
-          backdropFilter: 'var(--glass-blur)',
-          border: '1px solid var(--glass-border)',
-          borderRadius: '16px',
-          padding: '2rem'
-        }}>
-          <h2 style={{ fontFamily: 'JetBrains Mono', fontSize: '1.2rem', marginBottom: '1.5rem', color: 'var(--text-secondary)' }}>Recent Training Sessions</h2>
-          
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-secondary)', fontFamily: 'JetBrains Mono', fontSize: '0.9rem' }}>
-                <th style={{ padding: '1rem 0' }}>Date</th>
-                <th style={{ padding: '1rem 0' }}>Agent</th>
-                <th style={{ padding: '1rem 0' }}>Duration</th>
-                <th style={{ padding: '1rem 0' }}>Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { date: "Oct 24", agent: "Mahiru", dur: "15m", res: "Mastered", color: "var(--secondary-color)" },
-                { date: "Oct 22", agent: "Amane", dur: "45m", res: "Improving", color: "var(--primary-color)" },
-                { date: "Oct 20", agent: "Mahiru", dur: "12m", res: "Review Needed", color: "var(--tertiary-color)" },
-              ].map((row, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                  <td style={{ padding: '1.2rem 0', fontWeight: 600 }}>{row.date}</td>
-                  <td style={{ padding: '1.2rem 0', fontFamily: 'JetBrains Mono', color: row.color }}>{row.agent}</td>
-                  <td style={{ padding: '1.2rem 0', color: 'var(--text-secondary)' }}>{row.dur}</td>
-                  <td style={{ padding: '1.2rem 0' }}>
-                    <span style={{ 
-                      background: `${row.color}20`, 
-                      color: row.color, 
-                      padding: '0.4rem 1rem', 
-                      borderRadius: '100px',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                      border: `1px solid ${row.color}50`
-                    }}>
-                      {row.res}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </motion.div>
-
       </motion.div>
     </div>
   );
