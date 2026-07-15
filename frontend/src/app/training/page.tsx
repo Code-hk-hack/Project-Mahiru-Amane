@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import anime from "animejs";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { ArrowLeft, Send, Activity, MessageSquareWarning, PauseCircle } from "lucide-react";
 
 interface AnalystFeedback {
   passiveness_score: number;
@@ -21,7 +21,6 @@ interface Message {
 
 const TypewriterText = ({ text, onComplete }: { text: string, onComplete?: () => void }) => {
   const [displayedText, setDisplayedText] = useState("");
-  
   const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
@@ -39,7 +38,7 @@ const TypewriterText = ({ text, onComplete }: { text: string, onComplete?: () =>
         clearInterval(interval);
         if (onCompleteRef.current) onCompleteRef.current();
       }
-    }, 25); 
+    }, 20); 
     
     return () => clearInterval(interval);
   }, [text]);
@@ -47,14 +46,18 @@ const TypewriterText = ({ text, onComplete }: { text: string, onComplete?: () =>
   return <span>{displayedText}</span>;
 };
 
-export default function Home() {
+export default function TrainingPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState("");
-  // Emotion state moved to after activeCharacter
   
+  const [activeCharacter, setActiveCharacter] = useState<"mahiru" | "amane">("mahiru");
+  const [currentEmotion, setCurrentEmotion] = useState("waiting");
+  
+  const chatLogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     let storedSessionId = localStorage.getItem("mahiru_session_id");
     if (!storedSessionId) {
@@ -79,46 +82,23 @@ export default function Home() {
     
     fetchHistory();
   }, []);
-  
-  // Support for both characters
-  const [activeCharacter, setActiveCharacter] = useState<"mahiru" | "amane">("mahiru");
-  const [currentEmotion, setCurrentEmotion] = useState("waiting");
-  
-  // When active character changes, reset emotion to their default
+
   useEffect(() => {
     setCurrentEmotion(activeCharacter === "mahiru" ? "waiting" : "happy");
   }, [activeCharacter]);
   
   const getSpriteFilename = (character: "mahiru" | "amane", emotion: string) => {
-    // The backend now outputs the exact image filename based on the available files
-    // If the emotion is still 'neutral' from an old chat, map it to the defaults
     if (emotion === "neutral") {
       emotion = character === "mahiru" ? "waiting" : "happy";
     }
     return `${character}_${emotion}.png`;
   };
-  
-  const spriteRef = useRef(null);
-  const chatLogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (chatLogRef.current) {
       chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
     }
   }, [messages]);
-
-  useEffect(() => {
-    if (spriteRef.current) {
-      anime({
-        targets: spriteRef.current,
-        translateY: [10, -10],
-        direction: 'alternate',
-        loop: true,
-        easing: 'easeInOutSine',
-        duration: 3500
-      });
-    }
-  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || isTyping || isLoading) return;
@@ -154,18 +134,7 @@ export default function Home() {
       }]);
       
       setCurrentEmotion(data.emotion || "neutral");
-      
       setIsTyping(true);
-      
-      if (spriteRef.current) {
-        anime({
-          targets: spriteRef.current,
-          scale: [1, 1.05, 1],
-          duration: 400,
-          easing: 'easeOutQuad'
-        });
-      }
-      
     } catch (err) {
       console.error(err);
     } finally {
@@ -179,159 +148,169 @@ export default function Home() {
     : { role: "coach", content: "..." };
 
   return (
-    <div className="vn-container">
-      <div className="bg-vignette" />
+    <div className="min-h-screen flex flex-col bg-[#000000] text-[#EDEDED] font-sans selection:bg-white/30">
       
-      {/* Back to Home Button */}
-      <Link href="/" style={{
-        position: 'absolute',
-        top: '2rem',
-        right: '2rem',
-        zIndex: 50,
-        color: 'var(--text-secondary)',
-        fontFamily: 'JetBrains Mono',
-        textDecoration: 'none',
-        padding: '0.5rem 1rem',
-        border: '1px solid var(--glass-border)',
-        borderRadius: '8px',
-        background: 'var(--glass-bg)',
-        backdropFilter: 'var(--glass-blur)'
-      }}>
-        ← BACK TO HOME
-      </Link>
-      
-      {/* Character Selector HUD */}
-      <div className="character-selector">
-        <button 
-          className={`char-btn mahiru ${activeCharacter === 'mahiru' ? 'active' : ''}`}
-          onClick={() => setActiveCharacter('mahiru')}
-        >
-          Mahiru
-        </button>
-        <button 
-          className={`char-btn amane ${activeCharacter === 'amane' ? 'active' : ''}`}
-          onClick={() => setActiveCharacter('amane')}
-        >
-          Amane
-        </button>
-      </div>
+      {/* Top Border */}
+      <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-      <div className="character-display">
-        <motion.div 
-          key={activeCharacter} // Re-animate when character switches
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-        >
-          <div ref={spriteRef} className="character-sprite">
-            <img src={`/${getSpriteFilename(activeCharacter, currentEmotion)}`} alt={`${activeCharacter} ${currentEmotion}`} className="character-image" 
-              onError={(e) => {
-                // Fallback to neutral if specific emotion doesn't exist
-                const fallback = activeCharacter === "mahiru" ? "mahiru_waiting.png" : "amane_happy.png";
-                if (!e.currentTarget.src.includes(fallback)) {
-                  e.currentTarget.src = `/${fallback}`;
-                } else {
-                  e.currentTarget.style.display = 'none';
-                }
-              }} 
-            />
-          </div>
-        </motion.div>
-      </div>
-
-      <div className="ui-layer">
+      {/* Navigation */}
+      <nav className="flex items-center justify-between px-8 py-6 border-b border-white/10 z-10 relative bg-[#000000]">
+        <div className="flex items-center gap-6">
+          <Link href="/" className="text-[#A0A0A0] hover:text-white transition-colors flex items-center gap-2 text-sm font-medium">
+            <ArrowLeft className="w-4 h-4" />
+            Home
+          </Link>
+          <div className="h-4 w-px bg-white/20" />
+          <h1 className="font-semibold text-white tracking-tight">Active Evaluation</h1>
+        </div>
         
-        <div className="dialogue-wrapper">
-          
-          {/* Chat History Log */}
-          {messages.length > 1 && (
-            <div className="chat-log" ref={chatLogRef}>
-              {messages.slice(0, -1).map((msg, i) => (
-                <div key={i} className={`log-entry ${msg.role} ${msg.role === 'coach' ? activeCharacter : ''}`}>
-                  <div className={`log-name ${msg.role} ${msg.role === 'coach' ? activeCharacter : ''}`}>
-                    {msg.role === 'coach' ? (activeCharacter === 'mahiru' ? 'Mahiru' : 'Amane') : 'You'}
-                  </div>
-                  <div>{msg.content}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Floating Name Tag */}
-          <div className={`name-tag ${currentDialogue.role === "coach" ? activeCharacter : "user"}`}>
-            {currentDialogue.role === "coach" ? (activeCharacter === "mahiru" ? "Mahiru" : "Amane") : "You"}
-          </div>
-          
-          <motion.div 
-            className={`dialogue-box ${activeCharacter}`}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
+        {/* Character Selector */}
+        <div className="flex bg-[#0A0A0A] border border-white/10 rounded-md overflow-hidden">
+          <button 
+            className={`px-4 py-1.5 text-sm font-medium transition-colors ${activeCharacter === 'mahiru' ? 'bg-white text-black' : 'text-[#A0A0A0] hover:text-white'}`}
+            onClick={() => setActiveCharacter('mahiru')}
           >
-            <div className="dialogue-text">
+            Mahiru
+          </button>
+          <div className="w-px bg-white/10" />
+          <button 
+            className={`px-4 py-1.5 text-sm font-medium transition-colors ${activeCharacter === 'amane' ? 'bg-white text-black' : 'text-[#A0A0A0] hover:text-white'}`}
+            onClick={() => setActiveCharacter('amane')}
+          >
+            Amane
+          </button>
+        </div>
+      </nav>
+
+      <div className="flex-1 flex overflow-hidden relative">
+        
+        {/* Main Interface */}
+        <div className="flex-1 flex flex-col items-center justify-end pb-12 px-4 relative z-10">
+          
+          {/* Character Display */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none opacity-80 mix-blend-lighten">
+            <AnimatePresence mode="wait">
+              <motion.img 
+                key={`${activeCharacter}-${currentEmotion}`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.05 }}
+                transition={{ duration: 0.5 }}
+                src={`/${getSpriteFilename(activeCharacter, currentEmotion)}`} 
+                alt="Character" 
+                className="max-h-[70vh] object-contain"
+                onError={(e) => {
+                  const fallback = activeCharacter === "mahiru" ? "mahiru_waiting.png" : "amane_happy.png";
+                  if (!e.currentTarget.src.includes(fallback)) {
+                    e.currentTarget.src = `/${fallback}`;
+                  } else {
+                    e.currentTarget.style.display = 'none';
+                  }
+                }} 
+              />
+            </AnimatePresence>
+          </div>
+
+          {/* Dialogue Box */}
+          <div className="w-full max-w-3xl bg-[#0A0A0A]/80 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl relative z-10 overflow-hidden">
+            
+            {/* Header */}
+            <div className="bg-white/5 border-b border-white/10 px-6 py-3 flex items-center justify-between">
+               <div className="text-xs font-bold uppercase tracking-widest text-[#A0A0A0]">
+                 {currentDialogue.role === "coach" ? (activeCharacter === "mahiru" ? "Mahiru" : "Amane") : "You"}
+               </div>
+            </div>
+            
+            {/* Dialogue Text */}
+            <div className="p-6 md:p-8 min-h-[120px] text-lg leading-relaxed font-light">
               {currentDialogue.role === "coach" && currentDialogue.content !== "..." ? (
                 <TypewriterText 
                   text={currentDialogue.content} 
                   onComplete={() => setIsTyping(false)} 
                 />
               ) : (
-                <span>{currentDialogue.content}</span>
+                <span className="text-[#A0A0A0]">{currentDialogue.content}</span>
               )}
             </div>
-
-            <div className="input-container">
-              <input 
-                type="text" 
-                className="chat-input"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Type your response..."
-                disabled={isLoading || isTyping}
-              />
-              <button 
-                className="send-button"
-                onClick={handleSend}
-                disabled={isLoading || isTyping || !input.trim()}
-              >
-                {isLoading ? "..." : "Send"}
-              </button>
+            
+            {/* Input Area */}
+            <div className="p-4 border-t border-white/10 bg-[#000000]/50">
+              <div className="flex items-center gap-3">
+                <input 
+                  type="text" 
+                  className="flex-1 bg-transparent border-none outline-none text-[#EDEDED] placeholder-[#A0A0A0] font-light px-2"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  placeholder="Type your response..."
+                  disabled={isLoading || isTyping}
+                />
+                <button 
+                  className={`p-2 rounded-md transition-colors ${!input.trim() || isLoading || isTyping ? 'text-white/20' : 'bg-white text-black hover:bg-gray-200'}`}
+                  onClick={handleSend}
+                  disabled={isLoading || isTyping || !input.trim()}
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          </motion.div>
+          </div>
+          
         </div>
 
-        <motion.div 
-          className="analyst-panel"
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4, duration: 0.6 }}
-        >
-          <div className="analyst-header">Analyst Overlay</div>
-          
-          <div className="metric-row">
-            <span>Passiveness</span>
-            <span style={{ color: (latestFeedback?.passiveness_score || 0) > 5 ? 'var(--mahiru-color)' : 'var(--text-primary)' }}>
-              {latestFeedback ? latestFeedback.passiveness_score : 0}/10
-            </span>
-          </div>
-          <div className="metric-row">
-            <span>Apologies</span>
-            <span style={{ color: (latestFeedback?.apology_count || 0) > 0 ? 'var(--mahiru-color)' : 'var(--text-primary)' }}>
-              {latestFeedback ? latestFeedback.apology_count : 0}
-            </span>
-          </div>
-          <div className="metric-row">
-            <span>Hesitations</span>
-            <span style={{ color: (latestFeedback?.hesitation_count || 0) > 0 ? 'var(--mahiru-color)' : 'var(--text-primary)' }}>
-              {latestFeedback ? latestFeedback.hesitation_count : 0}
-            </span>
+        {/* Real-time Analyst Panel */}
+        <div className="w-80 border-l border-white/10 bg-[#0A0A0A] flex flex-col relative z-10">
+          <div className="p-6 border-b border-white/10">
+            <h2 className="text-sm font-semibold tracking-tight">Real-Time Analysis</h2>
+            <p className="text-xs text-[#A0A0A0] mt-1">Live metrics from your speech patterns.</p>
           </div>
           
-          <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            <strong style={{ color: 'var(--amane-color)' }}>COACH NOTES:</strong><br /><br />
-            {latestFeedback ? latestFeedback.feedback_notes : "Awaiting input..."}
+          <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+            
+            <div>
+              <div className="flex items-center gap-2 mb-2 text-[#A0A0A0]">
+                <Activity className="w-4 h-4" />
+                <span className="text-xs font-semibold uppercase tracking-wider">Passiveness</span>
+              </div>
+              <div className="text-2xl font-semibold">
+                {latestFeedback ? latestFeedback.passiveness_score : 0}<span className="text-[#A0A0A0] text-sm">/10</span>
+              </div>
+              {latestFeedback && latestFeedback.passiveness_score > 5 && (
+                <div className="text-xs text-red-400 mt-1 font-medium">Critical passiveness detected</div>
+              )}
+            </div>
+            
+            <div>
+              <div className="flex items-center gap-2 mb-2 text-[#A0A0A0]">
+                <MessageSquareWarning className="w-4 h-4" />
+                <span className="text-xs font-semibold uppercase tracking-wider">Apologies</span>
+              </div>
+              <div className="text-2xl font-semibold">
+                {latestFeedback ? latestFeedback.apology_count : 0}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-2 text-[#A0A0A0]">
+                <PauseCircle className="w-4 h-4" />
+                <span className="text-xs font-semibold uppercase tracking-wider">Hesitations</span>
+              </div>
+              <div className="text-2xl font-semibold">
+                {latestFeedback ? latestFeedback.hesitation_count : 0}
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <div className="text-xs font-semibold uppercase tracking-wider text-[#A0A0A0] mb-3">
+                Coach Notes
+              </div>
+              <div className="text-sm text-[#A0A0A0] leading-relaxed p-4 bg-white/5 rounded-md border border-white/10">
+                {latestFeedback ? latestFeedback.feedback_notes : "Awaiting input..."}
+              </div>
+            </div>
+
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
