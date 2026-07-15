@@ -1,20 +1,20 @@
 import os
 import json
-from openai import OpenAI
+from groq import Groq
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# OpenRouter configuration
-api_key = os.environ.get("OPENROUTER_API_KEY")
+# Groq configuration (Lightning Fast Inference)
+api_key = os.environ.get("GROQ_API_KEY")
 
-client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
+client = Groq(
     api_key=api_key or "MISSING_KEY",
 )
 
-MODEL = os.environ.get("MODEL_NAME", "meta-llama/llama-3-8b-instruct:free") # Using a free model as default
+# Using LLaMA 3 8B optimized for Groq LPUs
+MODEL = os.environ.get("MODEL_NAME", "llama3-8b-8192") 
 
 class AnalystFeedback(BaseModel):
     passiveness_score: int = Field(..., description="Score from 0 to 10 on how passive the user's language is.")
