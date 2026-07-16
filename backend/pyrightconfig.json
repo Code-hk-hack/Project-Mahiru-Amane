@@ -1,0 +1,10 @@
+{
+  "typeCheckingMode": "off",
+  "reportOptionalSubscript": "none",
+  "reportOptionalMemberAccess": "none",
+  "reportAttributeAccessIssue": "none",
+  "reportPossiblyUnboundVariable": "none",
+  "reportCallIssue": "none",
+  "reportArgumentType": "none",
+  "reportIndexIssue": "none"
+}
