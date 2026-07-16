@@ -33,23 +33,22 @@ class VoiceManager:
         # but let's check its stream_and_collect method.
         client = GnaniSTTStreamClient(
             api_key=self.api_key,
-            language=language,
-            encoding="LINEAR16",
+            language_code=language,
             sample_rate=16000
         )
         
         try:
-            # We use stream_and_collect. Since realtime_pace=True is default, we can set it to False
+            # We use stream_audio. Since realtime_pace=True is default, we can set it to False
             # because the frontend is already streaming it in realtime.
-            transcripts = await client.stream_and_collect(
+            transcripts = await client.stream_audio(
                 audio_source=audio_chunk_generator,
                 realtime_pace=False
             )
             
-            # stream_and_collect returns list[StreamTranscriptEvent]
-            # Each event has a .transcript property or similar.
+            # stream_audio returns list[StreamTranscriptEvent]
+            # Each event has a .text property.
             # Let's concatenate them.
-            final_text = " ".join([t.transcript for t in transcripts if hasattr(t, 'transcript')])
+            final_text = " ".join([t.text for t in transcripts if hasattr(t, 'text')])
             return final_text.strip()
             
         except Exception as e:

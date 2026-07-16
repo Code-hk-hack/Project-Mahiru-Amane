@@ -133,6 +133,7 @@ Address the user's message naturally in character, but weave in a harsh but cons
 If you need to perform an action for the user (like sending an email or checking a calendar), you MUST use the provided tools.
 
 CRITICAL INSTRUCTION: You must respond in plain text, speaking directly to the user.
+IMPORTANT: Keep your response very brief (2 or 3 short sentences MAX).
 AT THE VERY END of your response, you must append an emotion tag like this: <emotion>happy</emotion>.
 Valid emotions: {emotions_list}
 """

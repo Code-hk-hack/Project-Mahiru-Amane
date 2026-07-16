@@ -219,7 +219,8 @@ export default function TrainingPage() {
           } else if (data.type === 'chunk') {
             setMessages(prev => {
               const newMsgs = [...prev];
-              newMsgs[newMsgs.length - 1].content += data.content;
+              const lastIdx = newMsgs.length - 1;
+              newMsgs[lastIdx] = { ...newMsgs[lastIdx], content: newMsgs[lastIdx].content + data.content };
               return newMsgs;
             });
           } else if (data.type === 'done') {
@@ -353,7 +354,8 @@ export default function TrainingPage() {
             } else if (data.type === 'chunk') {
               setMessages(prev => {
                 const newMsgs = [...prev];
-                newMsgs[newMsgs.length - 1].content += data.content;
+                const lastIdx = newMsgs.length - 1;
+                newMsgs[lastIdx] = { ...newMsgs[lastIdx], content: newMsgs[lastIdx].content + data.content };
                 return newMsgs;
               });
             } else if (data.type === 'done') {
@@ -469,7 +471,7 @@ export default function TrainingPage() {
             <div className="p-8 pt-10 min-h-[140px] text-[1.1rem] leading-relaxed font-medium text-[var(--text-primary)]">
               {currentDialogue.role === "coach" && currentDialogue.content !== "..." ? (
                 <TypewriterText 
-                  text={currentDialogue.content} 
+                  text={currentDialogue.content.replace(/<emotion>.*?<\/emotion>/gi, '').replace(/<emotion>.*/gi, '').trim()} 
                   onComplete={() => setIsTyping(false)} 
                 />
               ) : (
