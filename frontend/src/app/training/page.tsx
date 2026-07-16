@@ -5,6 +5,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, Send, Activity, MessageSquareWarning, PauseCircle, Mic } from "lucide-react";
 
+const SUPPORTED_LANGUAGES = [
+  { code: "en-IN", name: "English" },
+  { code: "hi", name: "Hindi" },
+  { code: "ta", name: "Tamil" },
+  { code: "te", name: "Telugu" },
+  { code: "kn", name: "Kannada" },
+  { code: "ml", name: "Malayalam" },
+  { code: "mr", name: "Marathi" },
+  { code: "gu", name: "Gujarati" },
+  { code: "bn", name: "Bengali" },
+  { code: "pa", name: "Punjabi" },
+];
+
 interface AnalystFeedback {
   passiveness_score: number;
   apology_count: number;
@@ -90,6 +103,7 @@ export default function TrainingPage() {
   const [sessionId, setSessionId] = useState("");
   
   const [activeCharacter, setActiveCharacter] = useState<"mahiru" | "amane">("mahiru");
+  const [activeLanguage, setActiveLanguage] = useState("en-IN");
   const [currentEmotion, setCurrentEmotion] = useState("waiting");
   
   const chatLogRef = useRef<HTMLDivElement>(null);
@@ -155,7 +169,7 @@ export default function TrainingPage() {
   const connectWebSocket = () => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return wsRef.current;
     
-    const ws = new WebSocket(`ws://localhost:8000/ws/voice-chat?session_id=${sessionId}&character=${activeCharacter}&difficulty=hard`);
+    const ws = new WebSocket(`ws://localhost:8000/ws/voice-chat?session_id=${sessionId}&character=${activeCharacter}&difficulty=hard&language=${activeLanguage}`);
     wsRef.current = ws;
     
     ws.onmessage = async (event) => {
@@ -316,20 +330,33 @@ export default function TrainingPage() {
           <h1 className="font-[family-name:var(--font-playfair)] font-bold text-xl tracking-wide text-[var(--text-primary)]">Active Evaluation</h1>
         </div>
         
-        {/* Character Selector */}
-        <div className="flex bg-white border border-[var(--primary-color)]/20 rounded-full overflow-hidden shadow-sm p-1">
-          <button 
-            className={`px-6 py-1.5 text-sm font-bold rounded-full transition-all duration-300 ${activeCharacter === 'mahiru' ? 'bg-[var(--primary-color)] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[var(--primary-color)] hover:bg-[var(--primary-color)]/5'}`}
-            onClick={() => setActiveCharacter('mahiru')}
+        <div className="flex items-center gap-4">
+          {/* Language Selector */}
+          <select 
+            value={activeLanguage}
+            onChange={(e) => setActiveLanguage(e.target.value)}
+            className="bg-white border border-[var(--primary-color)]/20 text-[var(--text-secondary)] text-sm font-semibold rounded-full px-4 py-2 outline-none focus:border-[var(--primary-color)] transition-colors shadow-sm cursor-pointer"
           >
-            Mahiru
-          </button>
-          <button 
-            className={`px-6 py-1.5 text-sm font-bold rounded-full transition-all duration-300 ${activeCharacter === 'amane' ? 'bg-[#8CA899] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[#8CA899] hover:bg-[#8CA899]/5'}`}
-            onClick={() => setActiveCharacter('amane')}
-          >
-            Amane
-          </button>
+            {SUPPORTED_LANGUAGES.map(lang => (
+              <option key={lang.code} value={lang.code}>{lang.name}</option>
+            ))}
+          </select>
+
+          {/* Character Selector */}
+          <div className="flex bg-white border border-[var(--primary-color)]/20 rounded-full overflow-hidden shadow-sm p-1">
+            <button 
+              className={`px-6 py-1.5 text-sm font-bold rounded-full transition-all duration-300 ${activeCharacter === 'mahiru' ? 'bg-[var(--primary-color)] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[var(--primary-color)] hover:bg-[var(--primary-color)]/5'}`}
+              onClick={() => setActiveCharacter('mahiru')}
+            >
+              Mahiru
+            </button>
+            <button 
+              className={`px-6 py-1.5 text-sm font-bold rounded-full transition-all duration-300 ${activeCharacter === 'amane' ? 'bg-[#8CA899] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[#8CA899] hover:bg-[#8CA899]/5'}`}
+              onClick={() => setActiveCharacter('amane')}
+            >
+              Amane
+            </button>
+          </div>
         </div>
       </nav>
 

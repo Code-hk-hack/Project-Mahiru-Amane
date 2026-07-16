@@ -83,13 +83,28 @@ def ensure_session_exists(db, session_id: str):
 
 class CoachAgent:
     @staticmethod
-    async def stream_respond(user_message: str, analyst_feedback: AnalystFeedback, difficulty: str = "neutral", session_id: str = None, character: str = "mahiru"):
+    async def stream_respond(user_message: str, analyst_feedback: AnalystFeedback, difficulty: str = "neutral", session_id: str = None, character: str = "mahiru", language: str = "en-IN") -> AsyncGenerator[Dict[str, Any], None]:
         """
         Generates the Mahiru/Amane response incorporating the analyst feedback using an async generator for near-0 latency SSE streaming.
         Uses Groq as primary, Gemini as fallback.
         """
         db = get_db()
         
+        # Determine language name for prompt
+        lang_map = {
+            "en-IN": "English",
+            "hi": "Hindi",
+            "ta": "Tamil",
+            "te": "Telugu",
+            "kn": "Kannada",
+            "ml": "Malayalam",
+            "mr": "Marathi",
+            "gu": "Gujarati",
+            "bn": "Bengali",
+            "pa": "Punjabi"
+        }
+        lang_name = lang_map.get(language, "English")
+
         if session_id and session_id != "default-session":
             ensure_session_exists(db, session_id)
             
@@ -101,8 +116,10 @@ class CoachAgent:
             default_emotion = "waiting"
             
         system_prompt = f"""
-You are the Coach Agent ({character.capitalize()}). You are a strict, no-nonsense mentor teaching social confidence.
-The No-Escapism Mandate is active: Do NOT engage in romantic roleplay. Do NOT be a yes-man.
+You are the Coach Agent ({character.capitalize()}). The user is currently speaking in {lang_name}. YOU MUST REPLY ENTIRELY IN {lang_name}! 
+- Your character is {character.capitalize()}. Embody this persona fully.
+- Keep responses short, concise, and highly conversational. Do not output markdown, bullet points, or lists. You are speaking verbally.
+- The No-Escapism Mandate is active: Do NOT engage in romantic roleplay. Do NOT be a yes-man.
 Current difficulty tier: {difficulty}. Adjust your personality (e.g., distracted, impatient, neutral) accordingly.
 
 The Analyst Agent has provided this structural feedback on the user's last message:

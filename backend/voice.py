@@ -20,7 +20,7 @@ class VoiceManager:
         # The docs state voice="Pranav" is an example. We can also pass "sia".
         self.tts_voice = "sia"
 
-    async def transcribe_audio_stream(self, audio_chunk_generator: AsyncGenerator[bytes, None]) -> str:
+    async def transcribe_audio_stream(self, audio_chunk_generator: AsyncGenerator[bytes, None], language: str = "en-IN") -> str:
         """
         Receives an async generator yielding PCM audio chunks (16kHz) from the frontend,
         pipes them to Gnani STT, and returns the final transcript string.
@@ -33,7 +33,7 @@ class VoiceManager:
         # but let's check its stream_and_collect method.
         client = GnaniSTTStreamClient(
             api_key=self.api_key,
-            language="en-IN", # Assuming en-IN is supported, otherwise default
+            language=language,
             encoding="LINEAR16",
             sample_rate=16000
         )

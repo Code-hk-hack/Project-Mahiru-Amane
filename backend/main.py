@@ -79,7 +79,8 @@ async def websocket_voice_chat(
     websocket: WebSocket,
     session_id: str = "default-session",
     difficulty: str = "neutral",
-    character: str = "mahiru"
+    character: str = "mahiru",
+    language: str = "en-IN"
 ):
     await websocket.accept()
 
@@ -97,7 +98,7 @@ async def websocket_voice_chat(
                             break
 
             # 2. Transcribe incoming audio (blocks until receive_audio completes)
-            transcript = await voice_manager.transcribe_audio_stream(receive_audio())
+            transcript = await voice_manager.transcribe_audio_stream(receive_audio(), language=language)
             
             if not transcript:
                 # If no audio or empty transcript, wait for next cycle
@@ -112,7 +113,7 @@ async def websocket_voice_chat(
             
             # 4. Stream LLM response & TTS
             async def text_generator():
-                async for item in CoachAgent.stream_respond(transcript, feedback, difficulty, session_id, character):
+                async for item in CoachAgent.stream_respond(transcript, feedback, difficulty, session_id, character, language):
                     if item["type"] == "chunk":
                         # Send text to frontend for UI update
                         await websocket.send_json(item)
