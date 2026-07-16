@@ -1,5 +1,5 @@
 -- Project Mahiru/Amane Database Schema
-
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 1. Users Table
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
