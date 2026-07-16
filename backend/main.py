@@ -89,17 +89,22 @@ async def websocket_voice_chat(
         while True:
             # 1. Generator to read audio chunks from frontend until "stop" message
             async def receive_audio():
+                print("Starting to receive audio from frontend...")
                 while True:
                     message = await websocket.receive()
-                    if "bytes" in message:
+                    if message.get("bytes") is not None:
                         yield message["bytes"]
-                    elif "text" in message:
+                    elif message.get("text") is not None:
                         data = json.loads(message["text"])
                         if data.get("type") == "stop_speaking":
+                            print("Received stop_speaking signal")
                             break
+                print("Finished receiving audio.")
 
             # 2. Transcribe incoming audio (blocks until receive_audio completes)
+            print("Calling voice_manager.transcribe_audio_stream...")
             transcript = await voice_manager.transcribe_audio_stream(receive_audio(), language=language)
+            print(f"Transcript received: {transcript}")
             
             if not transcript:
                 # If no audio or empty transcript, wait for next cycle
