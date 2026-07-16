@@ -1,5 +1,6 @@
 import os
 import asyncio
+import re
 from typing import AsyncGenerator
 
 try:
@@ -76,7 +77,6 @@ class VoiceManager:
                     
                     # If the start of the emotion tag appears, we can process everything before it 
                     # and ignore the rest for TTS, since it's at the very end of the LLM response.
-                    import re
                     if "<emotion" in sentence_buffer.lower():
                         parts = re.split(r'<emotion', sentence_buffer, flags=re.IGNORECASE)
                         clean_text = parts[0]

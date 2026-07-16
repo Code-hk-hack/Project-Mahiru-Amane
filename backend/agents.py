@@ -221,14 +221,23 @@ Valid emotions: {emotions_list}
                 if chunk.content:
                     full_response_text += chunk.content
                     
-                    if not emotion_extracted and "<emotion>" in full_response_text.lower() and "</emotion>" in full_response_text.lower():
-                        emotion_match = re.search(r"<emotion>(.*?)</emotion>", full_response_text, re.IGNORECASE)
+                    if not emotion_extracted:
+                        emotion_match = re.search(r"<emotion>([a-z_]+)</emotion>|<([a-z_]+)>", full_response_text, re.IGNORECASE)
                         if emotion_match:
-                            emotion = emotion_match.group(1).strip()
+                            emotion = (emotion_match.group(1) or emotion_match.group(2)).strip().lower()
                             emotion_extracted = True
                             yield {"type": "emotion", "emotion": emotion}
-
-                    yield {"type": "chunk", "content": chunk.content}
+                            
+                            match_end = emotion_match.end()
+                            text_to_yield = full_response_text[match_end:]
+                            if text_to_yield:
+                                yield {"type": "chunk", "content": text_to_yield}
+                        else:
+                            if not full_response_text.strip().startswith("<"):
+                                emotion_extracted = True
+                                yield {"type": "chunk", "content": full_response_text}
+                    else:
+                        yield {"type": "chunk", "content": chunk.content}
                 
                 # Accumulate tool calls if the model decides to use them
                 if chunk.tool_call_chunks:
@@ -277,11 +286,11 @@ Valid emotions: {emotions_list}
             break
 
         # Extract emotion from tags
-        emotion_match = re.search(r"<emotion>(.*?)</emotion>", full_response_text, re.IGNORECASE)
+        emotion_match = re.search(r"<emotion>([a-z_]+)</emotion>|<([a-z_]+)>", full_response_text, re.IGNORECASE)
         if emotion_match:
-            emotion = emotion_match.group(1).strip()
+            emotion = (emotion_match.group(1) or emotion_match.group(2)).strip().lower()
             # Remove the tag from the final spoken text
-            full_response_text = re.sub(r"<emotion>.*?</emotion>", "", full_response_text, flags=re.IGNORECASE).strip()
+            full_response_text = re.sub(r"<emotion>[a-z_]+</emotion>|<[a-z_]+>", "", full_response_text, flags=re.IGNORECASE).strip()
 
         # Save to database
         if session_id and session_id != "default-session":
