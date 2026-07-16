@@ -4,7 +4,7 @@ from typing import AsyncGenerator
 
 try:
     from gnani.stt import GnaniSTTStreamClient
-    from gnani.tts import GnaniTTSRealtimeClient
+    from gnani.tts import GnaniTTSRealtimeClient, AudioConfig
     GNANI_AVAILABLE = True
 except ImportError:
     GNANI_AVAILABLE = False
@@ -69,23 +69,39 @@ class VoiceManager:
         # GnaniTTSRealtimeClient is an async context manager
         try:
             async with GnaniTTSRealtimeClient(api_key=self.api_key) as client:
+                audio_cfg = AudioConfig(sample_rate=16000, encoding='linear_pcm', container='raw')
                 sentence_buffer = ""
                 
                 async for text_chunk in text_chunk_generator:
                     sentence_buffer += text_chunk
                     
+                    # If the start of the emotion tag appears, we can process everything before it 
+                    # and ignore the rest for TTS, since it's at the very end of the LLM response.
+                    import re
+                    if "<emotion" in sentence_buffer.lower():
+                        parts = re.split(r'<emotion', sentence_buffer, flags=re.IGNORECASE)
+                        clean_text = parts[0]
+                        if clean_text.strip():
+                            async for audio_chunk in client.synthesize(clean_text.strip(), voice=tts_voice, audio_config=audio_cfg):
+                                yield audio_chunk
+                        sentence_buffer = ""
+                        break # Stop TTS processing for the rest of the stream since it's just the tag
+                    
                     # Whenever we hit a logical sentence boundary, send it to TTS to minimize latency
                     # We can use simple punctuation checks.
                     if any(p in sentence_buffer for p in ['.', '?', '!', '\n']):
-                        # We yield from the async generator returned by synthesize
-                        async for audio_chunk in client.synthesize(sentence_buffer.strip(), voice=tts_voice):
-                            yield audio_chunk
+                        if sentence_buffer.strip():
+                            async for audio_chunk in client.synthesize(sentence_buffer.strip(), voice=tts_voice, audio_config=audio_cfg):
+                                yield audio_chunk
                         sentence_buffer = ""
                 
                 # Synthesize any remaining text
                 if sentence_buffer.strip():
-                    async for audio_chunk in client.synthesize(sentence_buffer.strip(), voice=tts_voice):
-                        yield audio_chunk
+                    # Just in case there is a malformed tag at the end
+                    clean_text = re.sub(r'<emotion.*', '', sentence_buffer, flags=re.IGNORECASE)
+                    if clean_text.strip():
+                        async for audio_chunk in client.synthesize(clean_text.strip(), voice=tts_voice, audio_config=audio_cfg):
+                            yield audio_chunk
                         
         except Exception as e:
             print(f"TTS Error: {e}")
