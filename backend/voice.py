@@ -28,22 +28,18 @@ class VoiceManager:
         if not GNANI_AVAILABLE or not self.api_key:
             raise RuntimeError("Gnani SDK not available or API Key missing")
 
-        # Create STT client
-        # GnaniSTTStreamClient doesn't require async context manager in standard usage based on docs,
-        # but let's check its stream_and_collect method.
-        client = GnaniSTTStreamClient(
-            api_key=self.api_key,
-            language_code=language,
-            sample_rate=16000
-        )
-        
         try:
             # We use stream_audio. Since realtime_pace=True is default, we can set it to False
             # because the frontend is already streaming it in realtime.
-            transcripts = await client.stream_audio(
-                audio_source=audio_chunk_generator,
-                realtime_pace=False
-            )
+            async with GnaniSTTStreamClient(
+                api_key=self.api_key,
+                language_code=language,
+                sample_rate=16000
+            ) as client:
+                transcripts = await client.stream_audio(
+                    audio_source=audio_chunk_generator,
+                    realtime_pace=False
+                )
             
             # stream_audio returns list[StreamTranscriptEvent]
             # Each event has a .text property.
