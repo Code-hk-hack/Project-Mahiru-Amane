@@ -300,10 +300,78 @@ export default function TrainingPage() {
     }
   };
 
-  const handleSend = () => {
-    // Only support voice for this hackathon phase, 
-    // or you could send text over WebSocket instead!
-    alert("Please use the Microphone button for real-time Voice Interaction!");
+  const handleSend = async () => {
+    if (!input.trim() || isLoading || isTyping || isRecording) return;
+    
+    const userText = input.trim();
+    setInput("");
+    setIsLoading(true);
+    
+    // Add user message to UI immediately
+    setMessages(prev => [...prev, { role: "user", content: userText }]);
+    
+    // Add empty coach message to be filled
+    setMessages(prev => [...prev, { role: "coach", content: "", emotion: "neutral" }]);
+    setIsTyping(true);
+
+    try {
+      const res = await fetch("http://localhost:8000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userText,
+          difficulty: "hard",
+          session_id: sessionId,
+          character: activeCharacter,
+          language: activeLanguage
+        }),
+      });
+
+      if (!res.body) throw new Error("No response body");
+      
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6));
+            
+            if (data.type === 'feedback') {
+              setMessages(prev => {
+                const newMsgs = [...prev];
+                const userIdx = newMsgs.map(m => m.role).lastIndexOf("user");
+                if (userIdx >= 0) newMsgs[userIdx].feedback = data.feedback;
+                return newMsgs;
+              });
+            } else if (data.type === 'chunk') {
+              setMessages(prev => {
+                const newMsgs = [...prev];
+                newMsgs[newMsgs.length - 1].content += data.content;
+                return newMsgs;
+              });
+            } else if (data.type === 'done') {
+              setCurrentEmotion(data.emotion);
+              setMessages(prev => {
+                const newMsgs = [...prev];
+                newMsgs[newMsgs.length - 1].emotion = data.emotion;
+                return newMsgs;
+              });
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Chat error:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const latestFeedback = messages.filter(m => m.feedback).pop()?.feedback;

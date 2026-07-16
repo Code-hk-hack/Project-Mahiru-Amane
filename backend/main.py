@@ -31,6 +31,7 @@ class ChatRequest(BaseModel):
     difficulty: str = "neutral"
     session_id: str = "default-session"
     character: str = "mahiru"
+    language: str = "en-IN"
 
 class ChatResponse(BaseModel):
     coach_response: str
@@ -67,7 +68,7 @@ async def chat_endpoint(request: ChatRequest):
         
         # Then yield the streamed coach response
         try:
-            async for item in CoachAgent.stream_respond(request.message, feedback, request.difficulty, request.session_id, request.character):
+            async for item in CoachAgent.stream_respond(request.message, feedback, request.difficulty, request.session_id, request.character, request.language):
                 yield f"data: {json.dumps(item)}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
