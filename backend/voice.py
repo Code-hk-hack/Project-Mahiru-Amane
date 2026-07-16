@@ -56,13 +56,16 @@ class VoiceManager:
             print(f"STT Error: {e}")
             return ""
 
-    async def synthesize_text_stream(self, text_chunk_generator: AsyncGenerator[str, None]) -> AsyncGenerator[bytes, None]:
+    async def synthesize_text_stream(self, text_chunk_generator: AsyncGenerator[str, None], character: str = "mahiru") -> AsyncGenerator[bytes, None]:
         """
         Takes an async generator yielding text chunks (from Groq LLM),
         pipes them into Gnani TTS, and yields PCM audio chunks (16kHz) to be sent to the frontend.
         """
         if not GNANI_AVAILABLE or not self.api_key:
             raise RuntimeError("Gnani SDK not available or API Key missing")
+            
+        # Select voice based on character
+        tts_voice = "sia" if character.lower() == "mahiru" else "pranav"
             
         # GnaniTTSRealtimeClient is an async context manager
         try:
@@ -76,13 +79,13 @@ class VoiceManager:
                     # We can use simple punctuation checks.
                     if any(p in sentence_buffer for p in ['.', '?', '!', '\n']):
                         # We yield from the async generator returned by synthesize
-                        async for audio_chunk in client.synthesize(sentence_buffer.strip(), voice=self.tts_voice):
+                        async for audio_chunk in client.synthesize(sentence_buffer.strip(), voice=tts_voice):
                             yield audio_chunk
                         sentence_buffer = ""
                 
                 # Synthesize any remaining text
                 if sentence_buffer.strip():
-                    async for audio_chunk in client.synthesize(sentence_buffer.strip(), voice=self.tts_voice):
+                    async for audio_chunk in client.synthesize(sentence_buffer.strip(), voice=tts_voice):
                         yield audio_chunk
                         
         except Exception as e:

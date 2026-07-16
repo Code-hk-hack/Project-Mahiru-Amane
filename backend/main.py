@@ -122,7 +122,7 @@ async def websocket_voice_chat(
                         await websocket.send_json(item)
 
             # Synthesize audio and send it over WebSocket as binary frames
-            async for audio_chunk in voice_manager.synthesize_text_stream(text_generator()):
+            async for audio_chunk in voice_manager.synthesize_text_stream(text_generator(), character=character):
                 await websocket.send_bytes(audio_chunk)
 
             # Signal that the turn is complete
