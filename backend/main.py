@@ -87,31 +87,40 @@ async def websocket_voice_chat(
 
     try:
         while True:
-            # 1. Generator to read audio chunks from frontend until "stop" message
-            async def receive_audio():
-                print("Starting to receive audio from frontend...")
-                while True:
-                    message = await websocket.receive()
-                    if message.get("bytes") is not None:
-                        yield message["bytes"]
-                    elif message.get("text") is not None:
-                        data = json.loads(message["text"])
-                        if data.get("type") == "stop_speaking":
-                            print("Received stop_speaking signal")
-                            break
-                print("Finished receiving audio.")
+            first_msg = await websocket.receive()
+            transcript = ""
+            is_audio = False
+            
+            if first_msg.get("text") is not None:
+                data = json.loads(first_msg["text"])
+                if data.get("type") == "text_input":
+                    transcript = data.get("text", "")
+            elif first_msg.get("bytes") is not None:
+                is_audio = True
 
-            # 2. Transcribe incoming audio (blocks until receive_audio completes)
-            print("Calling voice_manager.transcribe_audio_stream...")
-            transcript = await voice_manager.transcribe_audio_stream(receive_audio(), language=language)
-            print(f"Transcript received: {transcript}")
+            if is_audio:
+                # 1. Generator to read audio chunks from frontend until "stop" message
+                async def receive_audio():
+                    yield first_msg["bytes"]
+                    while True:
+                        message = await websocket.receive()
+                        if message.get("bytes") is not None:
+                            yield message["bytes"]
+                        elif message.get("text") is not None:
+                            data = json.loads(message["text"])
+                            if data.get("type") == "stop_speaking":
+                                break
+
+                # 2. Transcribe incoming audio
+                transcript = await voice_manager.transcribe_audio_stream(receive_audio(), language=language)
             
             if not transcript:
                 # If no audio or empty transcript, wait for next cycle
                 continue
                 
-            # Send the recognized text back to UI
-            await websocket.send_json({"type": "transcript", "text": transcript})
+            # Send the recognized text back to UI (only useful if it was voice, but harmless for text)
+            if is_audio:
+                await websocket.send_json({"type": "transcript", "text": transcript})
             
             # 3. Analyze text
             feedback = AnalystAgent.analyze(transcript)
@@ -125,6 +134,8 @@ async def websocket_voice_chat(
                         await websocket.send_json(item)
                         # Yield text to TTS
                         yield item["content"]
+                    elif item["type"] == "emotion":
+                        await websocket.send_json(item)
                     elif item["type"] == "done":
                         await websocket.send_json(item)
 
@@ -152,12 +163,13 @@ def get_chat_history(session_id: str):
         history_res = db.table('messages').select('*').eq('session_id', session_id).order('created_at').execute()
         
         formatted_messages = []
-        for msg in history_res.data:
+        for msg in history_res.data or []:
+            if not isinstance(msg, dict): continue
             formatted_msg = {
-                "role": msg['role'],
-                "content": msg['content']
+                "role": msg.get('role', ''),
+                "content": msg.get('content', '')
             }
-            if msg['role'] == 'user' and msg.get('passiveness_score') is not None:
+            if msg.get('role') == 'user' and msg.get('passiveness_score') is not None:
                 formatted_msg["feedback"] = {
                     "passiveness_score": msg.get('passiveness_score'),
                     "apology_count": msg.get('apology_count'),

@@ -37,10 +37,11 @@ class AnalystAgent:
                 _hr_knowledge_cache = "{}"
 
         # Initialize Groq for lightning-fast structured output
+        from pydantic import SecretStr
         groq_api_key = os.environ.get("GROQ_API_KEY")
         primary_llm = ChatGroq(
             model="llama-3.3-70b-versatile",
-            api_key=groq_api_key,
+            api_key=SecretStr(groq_api_key) if groq_api_key else None,
             temperature=0.1
         )
         
@@ -84,7 +85,7 @@ def ensure_session_exists(db, session_id: str):
 
 class CoachAgent:
     @staticmethod
-    async def stream_respond(user_message: str, analyst_feedback: AnalystFeedback, difficulty: str = "neutral", session_id: str = None, character: str = "mahiru", language: str = "en-IN") -> AsyncGenerator[Dict[str, Any], None]:
+    async def stream_respond(user_message: str, analyst_feedback: AnalystFeedback, difficulty: str = "neutral", session_id: str | None = None, character: str = "mahiru", language: str = "en-IN") -> AsyncGenerator[Dict[str, Any], None]:
         """
         Generates the Mahiru/Amane response incorporating the analyst feedback using an async generator for near-0 latency SSE streaming.
         Uses Groq as primary, Gemini as fallback.
@@ -134,7 +135,7 @@ If you need to perform an action for the user (like sending an email or checking
 
 CRITICAL INSTRUCTION: You must respond in plain text, speaking directly to the user.
 IMPORTANT: Keep your response very brief (2 or 3 short sentences MAX).
-AT THE VERY END of your response, you must append an emotion tag like this: <emotion>happy</emotion>.
+AT THE VERY BEGINNING of your response, you must prepend an emotion tag like this: <emotion>happy</emotion>.
 Valid emotions: {emotions_list}
 """
         messages = [SystemMessage(content=system_prompt)]
@@ -143,12 +144,13 @@ Valid emotions: {emotions_list}
         if session_id and session_id != "default-session":
             try:
                 history_res = db.table('messages').select('*').eq('session_id', session_id).order('created_at').limit(20).execute()
-                for msg in history_res.data:
-                    role = msg['role']
+                for msg in history_res.data or []:
+                    if not isinstance(msg, dict): continue
+                    role = msg.get('role')
                     if role == 'user':
-                        messages.append(HumanMessage(content=msg['content']))
+                        messages.append(HumanMessage(content=msg.get('content', '')))
                     elif role == 'coach':
-                        messages.append(AIMessage(content=msg['content']))
+                        messages.append(AIMessage(content=msg.get('content', '')))
             except Exception as e:
                 print(f"Failed to fetch history: {e}")
 
@@ -157,10 +159,11 @@ Valid emotions: {emotions_list}
         groq_api_key = os.environ.get("GROQ_API_KEY")
         gemini_api_key = os.environ.get("GEMINI_API_KEY")
         
+        from pydantic import SecretStr
         # Primary LLM: Groq with 70b-versatile
         primary_llm = ChatGroq(
             model="llama-3.3-70b-versatile",
-            api_key=groq_api_key,
+            api_key=SecretStr(groq_api_key) if groq_api_key else None,
             temperature=0.7
         )
         
@@ -205,6 +208,7 @@ Valid emotions: {emotions_list}
             
         full_response_text = ""
         emotion = default_emotion
+        emotion_extracted = False
 
         # Loop for tool calls (up to 3 iterations for latency)
         for _ in range(3):
@@ -216,6 +220,14 @@ Valid emotions: {emotions_list}
                 # If there's text, yield it to the frontend via SSE
                 if chunk.content:
                     full_response_text += chunk.content
+                    
+                    if not emotion_extracted and "<emotion>" in full_response_text.lower() and "</emotion>" in full_response_text.lower():
+                        emotion_match = re.search(r"<emotion>(.*?)</emotion>", full_response_text, re.IGNORECASE)
+                        if emotion_match:
+                            emotion = emotion_match.group(1).strip()
+                            emotion_extracted = True
+                            yield {"type": "emotion", "emotion": emotion}
+
                     yield {"type": "chunk", "content": chunk.content}
                 
                 # Accumulate tool calls if the model decides to use them

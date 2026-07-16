@@ -223,7 +223,7 @@ export default function TrainingPage() {
               newMsgs[lastIdx] = { ...newMsgs[lastIdx], content: newMsgs[lastIdx].content + data.content };
               return newMsgs;
             });
-          } else if (data.type === 'done') {
+          } else if (data.type === 'emotion' || data.type === 'done') {
             setCurrentEmotion(data.emotion);
             setMessages(prev => {
               const newMsgs = [...prev];
@@ -358,7 +358,7 @@ export default function TrainingPage() {
                 newMsgs[lastIdx] = { ...newMsgs[lastIdx], content: newMsgs[lastIdx].content + data.content };
                 return newMsgs;
               });
-            } else if (data.type === 'done') {
+            } else if (data.type === 'emotion' || data.type === 'done') {
               setCurrentEmotion(data.emotion);
               setMessages(prev => {
                 const newMsgs = [...prev];

@@ -7,6 +7,9 @@ try:
     from gnani.tts import GnaniTTSRealtimeClient, AudioConfig
     GNANI_AVAILABLE = True
 except ImportError:
+    GnaniSTTStreamClient = None # type: ignore
+    GnaniTTSRealtimeClient = None # type: ignore
+    AudioConfig = None # type: ignore
     GNANI_AVAILABLE = False
 
 class VoiceManager:
@@ -18,7 +21,7 @@ class VoiceManager:
         # The frontend persona (Mahiru) usually maps to a female voice.
         # "Pranav" is male, let's use "Sia" or "Neha" if supported, but we will default to "Sia"
         # The docs state voice="Pranav" is an example. We can also pass "sia".
-        self.tts_voice = "sia"
+        self.tts_voice = "kaveri"
 
     async def transcribe_audio_stream(self, audio_chunk_generator: AsyncGenerator[bytes, None], language: str = "en-IN") -> str:
         """
@@ -60,7 +63,7 @@ class VoiceManager:
             raise RuntimeError("Gnani SDK not available or API Key missing")
             
         # Select voice based on character
-        tts_voice = "sia" if character.lower() == "mahiru" else "pranav"
+        tts_voice = "kaveri" if character.lower() == "mahiru" else "pranav"
             
         # GnaniTTSRealtimeClient is an async context manager
         try:
