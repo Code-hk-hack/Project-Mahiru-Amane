@@ -197,7 +197,7 @@ Valid emotions: {emotions_list}
                 # If there's text, yield it to the frontend via SSE
                 if chunk.content:
                     full_response_text += chunk.content
-                    yield f"data: {json.dumps({'type': 'chunk', 'content': chunk.content})}\n\n"
+                    yield {"type": "chunk", "content": chunk.content}
                 
                 # Accumulate tool calls if the model decides to use them
                 if chunk.tool_call_chunks:
@@ -274,4 +274,4 @@ Valid emotions: {emotions_list}
                 print(f"Failed to save messages to DB: {e}")
 
         # Send final metadata event (emotion and cleaned text)
-        yield f"data: {json.dumps({'type': 'done', 'emotion': emotion})}\n\n"
+        yield {"type": "done", "emotion": emotion}

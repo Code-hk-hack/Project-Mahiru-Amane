@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft, Send, Activity, MessageSquareWarning, PauseCircle } from "lucide-react";
+import { ArrowLeft, Send, Activity, MessageSquareWarning, PauseCircle, Mic } from "lucide-react";
 
 interface AnalystFeedback {
   passiveness_score: number;
@@ -86,12 +86,29 @@ export default function TrainingPage() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [sessionId, setSessionId] = useState("");
   
   const [activeCharacter, setActiveCharacter] = useState<"mahiru" | "amane">("mahiru");
   const [currentEmotion, setCurrentEmotion] = useState("waiting");
   
   const chatLogRef = useRef<HTMLDivElement>(null);
+  
+  // WebSocket and Audio refs
+  const wsRef = useRef<WebSocket | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const nextStartTimeRef = useRef<number>(0);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) wsRef.current.close();
+      if (audioCtxRef.current) audioCtxRef.current.close();
+      if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach(t => t.stop());
+    };
+  }, []);
 
   useEffect(() => {
     let storedSessionId = localStorage.getItem("mahiru_session_id");
@@ -135,95 +152,144 @@ export default function TrainingPage() {
     }
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isTyping || isLoading) return;
-
-    const userMessage = input;
-    setInput("");
+  const connectWebSocket = () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return wsRef.current;
     
-    const newMessages = [...messages, { role: "user" as const, content: userMessage }];
-    setMessages(newMessages);
-    setIsLoading(true);
-
-    try {
-      const response = await fetch("http://localhost:8000/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          message: userMessage, 
-          difficulty: "hard", 
-          session_id: sessionId,
-          character: activeCharacter
-        }),
-      });
-      
-      if (!response.body) return;
-      
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      
-      let currentResponse = "";
-      let currentFeedback: any = undefined;
-      let currentEmotion = "neutral";
-      
-      setMessages(prev => [...prev, {
-        role: "coach",
-        content: "",
-        emotion: "neutral"
-      }]);
-      setIsTyping(true);
-      
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+    const ws = new WebSocket(`ws://localhost:8000/ws/voice-chat?session_id=${sessionId}&character=${activeCharacter}&difficulty=hard`);
+    wsRef.current = ws;
+    
+    ws.onmessage = async (event) => {
+      if (event.data instanceof Blob) {
+        // Binary audio chunk (TTS)
+        const arrayBuffer = await event.data.arrayBuffer();
+        if (!audioCtxRef.current) {
+          audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+          nextStartTimeRef.current = audioCtxRef.current.currentTime;
+        }
         
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n\n');
+        const ctx = audioCtxRef.current;
+        if (ctx.state === 'suspended') await ctx.resume();
         
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              
-              if (data.type === 'feedback') {
-                currentFeedback = data.feedback;
-                setMessages(prev => {
-                  const newMsgs = [...prev];
-                  newMsgs[newMsgs.length - 1].feedback = currentFeedback;
-                  return newMsgs;
-                });
-              } else if (data.type === 'chunk') {
-                currentResponse += data.content;
-                setMessages(prev => {
-                  const newMsgs = [...prev];
-                  newMsgs[newMsgs.length - 1].content = currentResponse;
-                  return newMsgs;
-                });
-              } else if (data.type === 'done') {
-                currentEmotion = data.emotion;
-                setMessages(prev => {
-                  const newMsgs = [...prev];
-                  newMsgs[newMsgs.length - 1].emotion = currentEmotion;
-                  return newMsgs;
-                });
-                setCurrentEmotion(currentEmotion);
-              } else if (data.type === 'error') {
-                console.error("Stream error:", data.content);
-              }
-            } catch (e) {
-              // Ignore incomplete JSON chunks from partial splits
-            }
+        const int16 = new Int16Array(arrayBuffer);
+        const float32 = new Float32Array(int16.length);
+        for (let i = 0; i < int16.length; i++) {
+          float32[i] = int16[i] / 0x8000;
+        }
+        
+        const audioBuffer = ctx.createBuffer(1, float32.length, 16000);
+        audioBuffer.getChannelData(0).set(float32);
+        
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        
+        const startTime = Math.max(ctx.currentTime, nextStartTimeRef.current);
+        source.start(startTime);
+        nextStartTimeRef.current = startTime + audioBuffer.duration;
+      } else {
+        // Text message
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'transcript') {
+            setMessages(prev => [...prev, { role: "user", content: data.text }]);
+            setMessages(prev => [...prev, { role: "coach", content: "", emotion: "neutral" }]);
+            setIsTyping(true);
+          } else if (data.type === 'feedback') {
+            setMessages(prev => {
+              const newMsgs = [...prev];
+              const userIdx = newMsgs.map(m => m.role).lastIndexOf("user");
+              if (userIdx >= 0) newMsgs[userIdx].feedback = data.feedback;
+              return newMsgs;
+            });
+          } else if (data.type === 'chunk') {
+            setMessages(prev => {
+              const newMsgs = [...prev];
+              newMsgs[newMsgs.length - 1].content += data.content;
+              return newMsgs;
+            });
+          } else if (data.type === 'done') {
+            setCurrentEmotion(data.emotion);
+            setMessages(prev => {
+              const newMsgs = [...prev];
+              newMsgs[newMsgs.length - 1].emotion = data.emotion;
+              return newMsgs;
+            });
+          } else if (data.type === 'turn_complete') {
+            setIsLoading(false);
           }
+        } catch (e) {
+          console.error("Failed to parse WS message", e);
         }
       }
+    };
+    
+    return ws;
+  };
+
+  const handleStartRecording = async () => {
+    if (isLoading || isTyping) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      setIsRecording(true);
+      setIsLoading(true); // Prevent text sending while recording
       
-    } catch (err) {
-      console.error(err);
-    } finally {
+      const ws = connectWebSocket();
+      // Wait for WS to open if not already
+      if (ws.readyState !== WebSocket.OPEN) {
+        await new Promise(resolve => ws.addEventListener('open', resolve, { once: true }));
+      }
+      
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      const source = audioCtx.createMediaStreamSource(stream);
+      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+      
+      scriptProcessorRef.current = processor;
+      
+      processor.onaudioprocess = (e) => {
+        const inputData = e.inputBuffer.getChannelData(0);
+        const pcmData = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          const s = Math.max(-1, Math.min(1, inputData[i]));
+          pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(pcmData.buffer);
+        }
+      };
+      
+      source.connect(processor);
+      processor.connect(audioCtx.destination);
+    } catch (e) {
+      console.error("Failed to access microphone", e);
       setIsLoading(false);
+      setIsRecording(false);
     }
+  };
+
+  const handleStopRecording = () => {
+    if (!isRecording) return;
+    setIsRecording(false);
+    
+    if (scriptProcessorRef.current) {
+      scriptProcessorRef.current.disconnect();
+      scriptProcessorRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(t => t.stop());
+      mediaStreamRef.current = null;
+    }
+    
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: "stop_speaking" }));
+    }
+  };
+
+  const handleSend = () => {
+    // Only support voice for this hackathon phase, 
+    // or you could send text over WebSocket instead!
+    alert("Please use the Microphone button for real-time Voice Interaction!");
   };
 
   const latestFeedback = messages.filter(m => m.feedback).pop()?.feedback;
@@ -326,12 +392,24 @@ export default function TrainingPage() {
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                   placeholder="Respond carefully..."
-                  disabled={isLoading || isTyping}
+                  disabled={isLoading || isTyping || isRecording}
                 />
+                
+                <button 
+                  className={`p-3 rounded-full transition-all duration-300 shadow-sm ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' : isLoading || isTyping ? 'bg-[var(--surface-low)] text-[var(--text-secondary)] opacity-50' : 'bg-gradient-to-r from-[#D4AF37] to-[#B5952F] text-white hover:shadow-[0_4px_15px_rgba(212,175,55,0.4)] hover:-translate-y-0.5'}`}
+                  onMouseDown={handleStartRecording}
+                  onMouseUp={handleStopRecording}
+                  onMouseLeave={handleStopRecording}
+                  disabled={isLoading && !isRecording}
+                  title="Hold to Speak"
+                >
+                  <Mic className="w-5 h-5" />
+                </button>
+
                 <button 
                   className={`p-3 rounded-full transition-all duration-300 shadow-sm ${!input.trim() || isLoading || isTyping ? 'bg-[var(--surface-low)] text-[var(--text-secondary)] opacity-50' : 'bg-[var(--primary-color)] text-white hover:bg-[#B5952F] hover:shadow-[0_4px_15px_rgba(212,175,55,0.3)] hover:-translate-y-0.5'}`}
                   onClick={handleSend}
-                  disabled={isLoading || isTyping || !input.trim()}
+                  disabled={isLoading || isTyping || !input.trim() || isRecording}
                 >
                   <Send className="w-5 h-5 ml-1 mt-0.5" />
                 </button>

@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from database import get_db
 from agents import AnalystAgent, CoachAgent, AnalystFeedback
 from mcp_client import init_mcp_client, close_mcp_client
+from voice import voice_manager
+from fastapi import WebSocket, WebSocketDisconnect
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -65,12 +67,75 @@ async def chat_endpoint(request: ChatRequest):
         
         # Then yield the streamed coach response
         try:
-            async for chunk in CoachAgent.stream_respond(request.message, feedback, request.difficulty, request.session_id, request.character):
-                yield chunk
+            async for item in CoachAgent.stream_respond(request.message, feedback, request.difficulty, request.session_id, request.character):
+                yield f"data: {json.dumps(item)}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@app.websocket("/ws/voice-chat")
+async def websocket_voice_chat(
+    websocket: WebSocket,
+    session_id: str = "default-session",
+    difficulty: str = "neutral",
+    character: str = "mahiru"
+):
+    await websocket.accept()
+
+    try:
+        while True:
+            # 1. Generator to read audio chunks from frontend until "stop" message
+            async def receive_audio():
+                while True:
+                    message = await websocket.receive()
+                    if "bytes" in message:
+                        yield message["bytes"]
+                    elif "text" in message:
+                        data = json.loads(message["text"])
+                        if data.get("type") == "stop_speaking":
+                            break
+
+            # 2. Transcribe incoming audio (blocks until receive_audio completes)
+            transcript = await voice_manager.transcribe_audio_stream(receive_audio())
+            
+            if not transcript:
+                # If no audio or empty transcript, wait for next cycle
+                continue
+                
+            # Send the recognized text back to UI
+            await websocket.send_json({"type": "transcript", "text": transcript})
+            
+            # 3. Analyze text
+            feedback = AnalystAgent.analyze(transcript)
+            await websocket.send_json({"type": "feedback", "feedback": feedback.model_dump()})
+            
+            # 4. Stream LLM response & TTS
+            async def text_generator():
+                async for item in CoachAgent.stream_respond(transcript, feedback, difficulty, session_id, character):
+                    if item["type"] == "chunk":
+                        # Send text to frontend for UI update
+                        await websocket.send_json(item)
+                        # Yield text to TTS
+                        yield item["content"]
+                    elif item["type"] == "done":
+                        await websocket.send_json(item)
+
+            # Synthesize audio and send it over WebSocket as binary frames
+            async for audio_chunk in voice_manager.synthesize_text_stream(text_generator()):
+                await websocket.send_bytes(audio_chunk)
+
+            # Signal that the turn is complete
+            await websocket.send_json({"type": "turn_complete"})
+
+    except WebSocketDisconnect:
+        print(f"WebSocket disconnected for session: {session_id}")
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        try:
+            await websocket.send_json({"type": "error", "content": str(e)})
+        except:
+            pass
 
 @app.get("/chat/history")
 def get_chat_history(session_id: str):
