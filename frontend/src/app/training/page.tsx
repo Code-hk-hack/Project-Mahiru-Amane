@@ -202,7 +202,12 @@ export default function TrainingPage() {
         const ctx = audioCtxRef.current;
         if (ctx.state === 'suspended') await ctx.resume();
         
-        const int16 = new Int16Array(arrayBuffer);
+        let buffer = arrayBuffer;
+        if (buffer.byteLength % 2 !== 0) {
+          buffer = buffer.slice(0, buffer.byteLength - 1);
+        }
+        
+        const int16 = new Int16Array(buffer);
         const float32 = new Float32Array(int16.length);
         for (let i = 0; i < int16.length; i++) {
           float32[i] = int16[i] / 0x8000;
@@ -400,7 +405,7 @@ export default function TrainingPage() {
     : { role: "coach", content: "..." };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--surface-lowest)] text-[var(--text-primary)] overflow-hidden selection:bg-[var(--primary-color)] selection:text-white relative">
+    <div suppressHydrationWarning className="min-h-screen flex flex-col bg-[var(--surface-lowest)] text-[var(--text-primary)] overflow-hidden selection:bg-[var(--primary-color)] selection:text-white relative">
       
       <FloatingDust />
 
@@ -421,6 +426,7 @@ export default function TrainingPage() {
         <div className="flex items-center gap-4">
           {/* Language Selector */}
           <select 
+            suppressHydrationWarning
             value={activeLanguage}
             onChange={(e) => setActiveLanguage(e.target.value)}
             className="bg-white border border-[var(--primary-color)]/20 text-[var(--text-secondary)] text-sm font-semibold rounded-full px-4 py-2 outline-none focus:border-[var(--primary-color)] transition-colors shadow-sm cursor-pointer"
@@ -433,12 +439,14 @@ export default function TrainingPage() {
           {/* Character Selector */}
           <div className="flex bg-white border border-[var(--primary-color)]/20 rounded-full overflow-hidden shadow-sm p-1">
             <button 
+              suppressHydrationWarning
               className={`px-6 py-1.5 text-sm font-bold rounded-full transition-all duration-300 ${activeCharacter === 'mahiru' ? 'bg-[var(--primary-color)] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[var(--primary-color)] hover:bg-[var(--primary-color)]/5'}`}
               onClick={() => setActiveCharacter('mahiru')}
             >
               Mahiru
             </button>
             <button 
+              suppressHydrationWarning
               className={`px-6 py-1.5 text-sm font-bold rounded-full transition-all duration-300 ${activeCharacter === 'amane' ? 'bg-[#8CA899] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[#8CA899] hover:bg-[#8CA899]/5'}`}
               onClick={() => setActiveCharacter('amane')}
             >
@@ -501,6 +509,7 @@ export default function TrainingPage() {
             <div className="p-4 border-t border-[var(--primary-color)]/10 bg-white/50 rounded-b-3xl">
               <div className="flex items-center gap-3">
                 <input 
+                  suppressHydrationWarning
                   type="text" 
                   className="flex-1 bg-transparent border-none outline-none text-[var(--text-primary)] placeholder-[var(--text-secondary)] font-medium px-4 py-2"
                   value={input}
@@ -511,6 +520,7 @@ export default function TrainingPage() {
                 />
                 
                 <button 
+                  suppressHydrationWarning
                   className={`p-3 rounded-full transition-all duration-300 shadow-sm ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' : isLoading || isTyping ? 'bg-[var(--surface-low)] text-[var(--text-secondary)] opacity-50' : 'bg-gradient-to-r from-[#D4AF37] to-[#B5952F] text-white hover:shadow-[0_4px_15px_rgba(212,175,55,0.4)] hover:-translate-y-0.5'}`}
                   onMouseDown={handleStartRecording}
                   onMouseUp={handleStopRecording}
@@ -522,6 +532,7 @@ export default function TrainingPage() {
                 </button>
 
                 <button 
+                  suppressHydrationWarning
                   className={`p-3 rounded-full transition-all duration-300 shadow-sm ${!input.trim() || isLoading || isTyping ? 'bg-[var(--surface-low)] text-[var(--text-secondary)] opacity-50' : 'bg-[var(--primary-color)] text-white hover:bg-[#B5952F] hover:shadow-[0_4px_15px_rgba(212,175,55,0.3)] hover:-translate-y-0.5'}`}
                   onClick={handleSend}
                   disabled={isLoading || isTyping || !input.trim() || isRecording}
