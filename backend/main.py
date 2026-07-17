@@ -88,6 +88,9 @@ async def websocket_voice_chat(
     try:
         while True:
             first_msg = await websocket.receive()
+            if first_msg.get("type") == "websocket.disconnect":
+                break
+                
             transcript = ""
             is_audio = False
             
@@ -115,7 +118,8 @@ async def websocket_voice_chat(
                 transcript = await voice_manager.transcribe_audio_stream(receive_audio(), language=language)
             
             if not transcript:
-                # If no audio or empty transcript, wait for next cycle
+                # If no audio or empty transcript, unlock the frontend UI and wait for next cycle
+                await websocket.send_json({"type": "turn_complete"})
                 continue
                 
             # Send the recognized text back to UI (only useful if it was voice, but harmless for text)

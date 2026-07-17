@@ -114,6 +114,7 @@ export default function TrainingPage() {
   const nextStartTimeRef = useRef<number>(0);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const recordingAudioCtxRef = useRef<AudioContext | null>(null);
   const isRecordingRef = useRef(false);
   
   // Clean up on unmount
@@ -121,6 +122,7 @@ export default function TrainingPage() {
     return () => {
       if (wsRef.current) wsRef.current.close();
       if (audioCtxRef.current) audioCtxRef.current.close();
+      if (recordingAudioCtxRef.current) recordingAudioCtxRef.current.close();
       if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach(t => t.stop());
     };
   }, []);
@@ -291,6 +293,7 @@ export default function TrainingPage() {
       }
       
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      recordingAudioCtxRef.current = audioCtx;
       const source = audioCtx.createMediaStreamSource(stream);
       const processor = audioCtx.createScriptProcessor(4096, 1, 1);
       
@@ -330,6 +333,10 @@ export default function TrainingPage() {
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(t => t.stop());
       mediaStreamRef.current = null;
+    }
+    if (recordingAudioCtxRef.current) {
+      recordingAudioCtxRef.current.close();
+      recordingAudioCtxRef.current = null;
     }
     
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
