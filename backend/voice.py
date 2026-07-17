@@ -64,7 +64,7 @@ class VoiceManager:
             raise RuntimeError("Gnani SDK not available or API Key missing")
             
         # Select voice based on character
-        tts_voice = "sia" if character.lower() == "mahiru" else "pranav"
+        tts_voice = "Kaveri" if character.lower() == "mahiru" else "Pranav"
             
         # GnaniTTSRealtimeClient is an async context manager
         try:
@@ -81,7 +81,7 @@ class VoiceManager:
                         parts = re.split(r'<emotion', sentence_buffer, flags=re.IGNORECASE)
                         clean_text = parts[0]
                         if clean_text.strip():
-                            async for audio_chunk in client.synthesize(clean_text.strip(), voice=tts_voice, audio_config=audio_cfg):
+                            async for audio_chunk in client.synthesize(clean_text.strip(), voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
                                 yield audio_chunk
                         sentence_buffer = ""
                         break # Stop TTS processing for the rest of the stream since it's just the tag
@@ -90,7 +90,7 @@ class VoiceManager:
                     # We can use simple punctuation checks.
                     if any(p in sentence_buffer for p in ['.', '?', '!', '\n']):
                         if sentence_buffer.strip():
-                            async for audio_chunk in client.synthesize(sentence_buffer.strip(), voice=tts_voice, audio_config=audio_cfg):
+                            async for audio_chunk in client.synthesize(sentence_buffer.strip(), voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
                                 yield audio_chunk
                         sentence_buffer = ""
                 
@@ -99,7 +99,7 @@ class VoiceManager:
                     # Just in case there is a malformed tag at the end
                     clean_text = re.sub(r'<emotion.*', '', sentence_buffer, flags=re.IGNORECASE)
                     if clean_text.strip():
-                        async for audio_chunk in client.synthesize(clean_text.strip(), voice=tts_voice, audio_config=audio_cfg):
+                        async for audio_chunk in client.synthesize(clean_text.strip(), voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
                             yield audio_chunk
                         
         except Exception as e:

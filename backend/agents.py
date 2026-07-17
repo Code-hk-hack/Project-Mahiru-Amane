@@ -95,15 +95,15 @@ class CoachAgent:
         # Determine language name for prompt
         lang_map = {
             "en-IN": "English",
-            "hi": "Hindi",
-            "ta": "Tamil",
-            "te": "Telugu",
-            "kn": "Kannada",
-            "ml": "Malayalam",
-            "mr": "Marathi",
-            "gu": "Gujarati",
-            "bn": "Bengali",
-            "pa": "Punjabi"
+            "hi-IN": "Hindi",
+            "ta-IN": "Tamil",
+            "te-IN": "Telugu",
+            "kn-IN": "Kannada",
+            "ml-IN": "Malayalam",
+            "mr-IN": "Marathi",
+            "gu-IN": "Gujarati",
+            "bn-IN": "Bengali",
+            "pa-IN": "Punjabi"
         }
         lang_name = lang_map.get(language, "English")
 

@@ -7,15 +7,15 @@ import { ArrowLeft, Send, Activity, MessageSquareWarning, PauseCircle, Mic } fro
 
 const SUPPORTED_LANGUAGES = [
   { code: "en-IN", name: "English" },
-  { code: "hi", name: "Hindi" },
-  { code: "ta", name: "Tamil" },
-  { code: "te", name: "Telugu" },
-  { code: "kn", name: "Kannada" },
-  { code: "ml", name: "Malayalam" },
-  { code: "mr", name: "Marathi" },
-  { code: "gu", name: "Gujarati" },
-  { code: "bn", name: "Bengali" },
-  { code: "pa", name: "Punjabi" },
+  { code: "hi-IN", name: "Hindi" },
+  { code: "ta-IN", name: "Tamil" },
+  { code: "te-IN", name: "Telugu" },
+  { code: "kn-IN", name: "Kannada" },
+  { code: "ml-IN", name: "Malayalam" },
+  { code: "mr-IN", name: "Marathi" },
+  { code: "gu-IN", name: "Gujarati" },
+  { code: "bn-IN", name: "Bengali" },
+  { code: "pa-IN", name: "Punjabi" },
 ];
 
 interface AnalystFeedback {
@@ -114,6 +114,7 @@ export default function TrainingPage() {
   const nextStartTimeRef = useRef<number>(0);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const isRecordingRef = useRef(false);
   
   // Clean up on unmount
   useEffect(() => {
@@ -271,6 +272,7 @@ export default function TrainingPage() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
       setIsRecording(true);
+      isRecordingRef.current = true;
       setIsLoading(true); // Prevent text sending while recording
       
       const ws = connectWebSocket();
@@ -286,6 +288,7 @@ export default function TrainingPage() {
       scriptProcessorRef.current = processor;
       
       processor.onaudioprocess = (e) => {
+        if (!isRecordingRef.current) return;
         const inputData = e.inputBuffer.getChannelData(0);
         const pcmData = new Int16Array(inputData.length);
         for (let i = 0; i < inputData.length; i++) {
@@ -309,6 +312,7 @@ export default function TrainingPage() {
   const handleStopRecording = () => {
     if (!isRecording) return;
     setIsRecording(false);
+    isRecordingRef.current = false;
     
     if (scriptProcessorRef.current) {
       scriptProcessorRef.current.disconnect();
