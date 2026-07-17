@@ -1,5 +1,8 @@
 {
+  "venvPath": ".",
+  "venv": ".venv",
   "typeCheckingMode": "off",
+  "reportMissingImports": "none",
   "reportOptionalSubscript": "none",
   "reportOptionalMemberAccess": "none",
   "reportAttributeAccessIssue": "none",
