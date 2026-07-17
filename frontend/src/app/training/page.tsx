@@ -125,12 +125,16 @@ export default function TrainingPage() {
   }, []);
 
   useEffect(() => {
-    let storedSessionId = localStorage.getItem("mahiru_session_id");
+    const key = `${activeCharacter}_session_id`;
+    let storedSessionId = localStorage.getItem(key);
     if (!storedSessionId) {
       storedSessionId = crypto.randomUUID();
-      localStorage.setItem("mahiru_session_id", storedSessionId);
+      localStorage.setItem(key, storedSessionId);
     }
     setSessionId(storedSessionId);
+
+    // Clear current messages when switching character
+    setMessages([]);
 
     const fetchHistory = async () => {
       try {
@@ -147,7 +151,21 @@ export default function TrainingPage() {
     };
     
     fetchHistory();
-  }, []);
+
+    // Force WS reconnect with new character parameters
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+  }, [activeCharacter]);
+
+  // Force WS reconnect when language changes
+  useEffect(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+  }, [activeLanguage]);
 
   useEffect(() => {
     setCurrentEmotion(activeCharacter === "mahiru" ? "waiting" : "happy");

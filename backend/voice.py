@@ -64,7 +64,7 @@ class VoiceManager:
             raise RuntimeError("Gnani SDK not available or API Key missing")
             
         # Select voice based on character
-        tts_voice = "kaveri" if character.lower() == "mahiru" else "pranav"
+        tts_voice = "sia" if character.lower() == "mahiru" else "pranav"
             
         # GnaniTTSRealtimeClient is an async context manager
         try:
