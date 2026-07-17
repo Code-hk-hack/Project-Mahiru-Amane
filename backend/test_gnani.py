@@ -13,9 +13,14 @@ async def test_gnani_tts():
             audio_cfg = AudioConfig(sample_rate=16000, encoding='linear_pcm', container='raw')
             print("Client initialized. Synthesizing...")
             chunks = []
-            async for chunk in client.synthesize("Hello, this is a test.", voice="sia", audio_config=audio_cfg):
+            async for chunk in client.synthesize("Hello, this is a test.", voice="Kaveri", audio_config=audio_cfg):
                 chunks.append(chunk)
-            print(f"Successfully received {len(chunks)} audio chunks.")
+            print(f"Successfully received {len(chunks)} audio chunks for Kaveri.")
+            
+            chunks = []
+            async for chunk in client.synthesize("Hello, this is a test.", voice="Pranav", audio_config=audio_cfg):
+                chunks.append(chunk)
+            print(f"Successfully received {len(chunks)} audio chunks for Pranav.")
     except Exception as e:
         print(f"Error: {e}")
 

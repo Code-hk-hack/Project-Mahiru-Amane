@@ -1,7 +1,3 @@
-import asyncio
-import os
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -29,7 +25,7 @@ async def init_mcp_client():
         
         _mcp_session = session
         print("Successfully connected to Slashy MCP!")
-    except Exception as e:
+    except (Exception, BaseExceptionGroup) as e:
         import traceback
         print(f"Failed to connect to Slashy MCP: {e}")
         traceback.print_exc()

@@ -45,7 +45,7 @@ def read_root():
 @app.get("/health")
 def health_check():
     try:
-        db = get_db()
+        get_db()
         return {"status": "ok", "db_client": "initialized"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -161,7 +161,7 @@ async def websocket_voice_chat(
         print(f"WebSocket error: {e}")
         try:
             await websocket.send_json({"type": "error", "content": str(e)})
-        except:
+        except Exception:
             pass
 
 @app.get("/chat/history")
@@ -173,7 +173,8 @@ def get_chat_history(session_id: str):
         
         formatted_messages = []
         for msg in history_res.data or []:
-            if not isinstance(msg, dict): continue
+            if not isinstance(msg, dict):
+                continue
             formatted_msg = {
                 "role": msg.get('role', ''),
                 "content": msg.get('content', '')

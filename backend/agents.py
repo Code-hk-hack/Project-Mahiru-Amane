@@ -145,7 +145,8 @@ Valid emotions: {emotions_list}
             try:
                 history_res = db.table('messages').select('*').eq('session_id', session_id).order('created_at').limit(20).execute()
                 for msg in history_res.data or []:
-                    if not isinstance(msg, dict): continue
+                    if not isinstance(msg, dict):
+                        continue
                     role = msg.get('role')
                     if role == 'user':
                         messages.append(HumanMessage(content=msg.get('content', '')))
