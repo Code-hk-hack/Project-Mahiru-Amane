@@ -204,6 +204,15 @@ export default function TrainingPage() {
         if (ctx.state === 'suspended') await ctx.resume();
         
         let buffer = arrayBuffer;
+        
+        // Strip WAV header if present (44 bytes starting with "RIFF")
+        if (buffer.byteLength >= 44) {
+          const view = new DataView(buffer);
+          if (view.getUint32(0, false) === 0x52494646) { // "RIFF"
+            buffer = buffer.slice(44);
+          }
+        }
+        
         if (buffer.byteLength % 2 !== 0) {
           buffer = buffer.slice(0, buffer.byteLength - 1);
         }
