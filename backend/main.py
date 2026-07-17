@@ -99,6 +99,7 @@ async def websocket_voice_chat(
                 if data.get("type") == "text_input":
                     transcript = data.get("text", "")
             elif first_msg.get("bytes") is not None:
+                print("Received first audio byte frame, starting audio processing.")
                 is_audio = True
 
             if is_audio:
@@ -115,13 +116,17 @@ async def websocket_voice_chat(
                                 break
 
                 # 2. Transcribe incoming audio
+                print("Starting transcription of audio stream...")
                 transcript = await voice_manager.transcribe_audio_stream(receive_audio(), language=language)
+                print(f"Transcription result: '{transcript}'")
             
             if not transcript:
+                print("No transcript (empty or silence). Sending turn_complete.")
                 # If no audio or empty transcript, unlock the frontend UI and wait for next cycle
                 await websocket.send_json({"type": "turn_complete"})
                 continue
                 
+            print("Sending recognized text to UI...")
             # Send the recognized text back to UI (only useful if it was voice, but harmless for text)
             if is_audio:
                 await websocket.send_json({"type": "transcript", "text": transcript})
