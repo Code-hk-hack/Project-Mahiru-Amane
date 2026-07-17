@@ -3,5 +3,6 @@
     "python.analysis.extraPaths": [
         "backend"
     ],
-    "python.analysis.typeCheckingMode": "off"
+    "python.analysis.typeCheckingMode": "off",
+    "css.lint.unknownAtRules": "ignore"
 }
