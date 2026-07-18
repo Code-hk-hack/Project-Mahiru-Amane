@@ -122,9 +122,10 @@ export default function TrainingPage() {
   const nextStartTimeRef = useRef<number>(0);
   const leftoverByteRef = useRef<Uint8Array | null>(null);
   const audioQueueRef = useRef<Promise<void>>(Promise.resolve());
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
-  const recordingAudioCtxRef = useRef<AudioContext | null>(null);
+  
+  // Browser STT refs
+  const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef<string>("");
   const isRecordingRef = useRef(false);
   
   // Clean up on unmount
@@ -132,8 +133,9 @@ export default function TrainingPage() {
     return () => {
       if (wsRef.current) wsRef.current.close();
       if (audioCtxRef.current) audioCtxRef.current.close();
-      if (recordingAudioCtxRef.current) recordingAudioCtxRef.current.close();
-      if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach(t => t.stop());
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch(e) {}
+      }
     };
   }, []);
 
@@ -345,46 +347,50 @@ export default function TrainingPage() {
 
   const handleStartRecording = async () => {
     if (isLoading || isTyping) return;
+    
+    // Check for browser support
+    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Browser STT is not supported in this browser. Please use Chrome or Edge.");
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
       setIsRecording(true);
       isRecordingRef.current = true;
       setIsLoading(true); // Prevent text sending while recording
+      transcriptRef.current = "";
       
       const ws = connectWebSocket();
-      // Wait for WS to open if not already
       if (ws.readyState !== WebSocket.OPEN) {
         await new Promise(resolve => ws.addEventListener('open', resolve, { once: true }));
       }
       
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-      recordingAudioCtxRef.current = audioCtx;
-      if (audioCtx.state === 'suspended') {
-        await audioCtx.resume();
-      }
-      const source = audioCtx.createMediaStreamSource(stream);
-      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+      const recognition = new SpeechRecognition();
+      recognition.lang = activeLanguage;
+      recognition.continuous = true;
+      recognition.interimResults = true;
       
-      scriptProcessorRef.current = processor;
-      
-      processor.onaudioprocess = (e) => {
-        if (!isRecordingRef.current) return;
-        const inputData = e.inputBuffer.getChannelData(0);
-        const pcmData = new Int16Array(inputData.length);
-        for (let i = 0; i < inputData.length; i++) {
-          const s = Math.max(-1, Math.min(1, inputData[i]));
-          pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      recognition.onresult = (event: any) => {
+        let currentTranscript = "";
+        for (let i = 0; i < event.results.length; i++) {
+          currentTranscript += event.results[i][0].transcript;
         }
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(pcmData.buffer);
+        transcriptRef.current = currentTranscript;
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        if (event.error === 'not-allowed') {
+          alert("Microphone access was denied. Please allow microphone access to use voice chat.");
         }
       };
       
-      source.connect(processor);
-      processor.connect(audioCtx.destination);
+      recognitionRef.current = recognition;
+      recognition.start();
+      
     } catch (e) {
-      console.error("Failed to access microphone", e);
+      console.error("Failed to start speech recognition", e);
       setIsLoading(false);
       setIsRecording(false);
     }
@@ -395,21 +401,26 @@ export default function TrainingPage() {
     setIsRecording(false);
     isRecordingRef.current = false;
     
-    if (scriptProcessorRef.current) {
-      scriptProcessorRef.current.disconnect();
-      scriptProcessorRef.current = null;
-    }
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(t => t.stop());
-      mediaStreamRef.current = null;
-    }
-    if (recordingAudioCtxRef.current) {
-      recordingAudioCtxRef.current.close();
-      recordingAudioCtxRef.current = null;
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch(e) {}
+      recognitionRef.current = null;
     }
     
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: "stop_speaking" }));
+      const finalTranscript = transcriptRef.current.trim();
+      if (finalTranscript) {
+        // We have text, send it with wants_audio flag to trigger backend TTS
+        wsRef.current.send(JSON.stringify({ 
+          type: "text_input", 
+          text: finalTranscript,
+          wants_audio: true 
+        }));
+      } else {
+        // Nothing was said
+        wsRef.current.send(JSON.stringify({ type: "stop_speaking" }));
+      }
     }
   };
 

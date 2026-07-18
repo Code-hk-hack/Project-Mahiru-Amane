@@ -99,6 +99,8 @@ async def websocket_voice_chat(
                     data = json.loads(first_msg["text"])
                     if data.get("type") == "text_input":
                         transcript = data.get("text", "")
+                        if data.get("wants_audio"):
+                            is_audio = True
                     elif data.get("type") == "stop_speaking":
                         await websocket.send_json({"type": "turn_complete"})
                         continue
