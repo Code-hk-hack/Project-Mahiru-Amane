@@ -384,6 +384,36 @@ export default function TrainingPage() {
         }
       };
       
+      recognition.onend = () => {
+        recognitionRef.current = null;
+        if (!wsRef.current) {
+          setIsLoading(false);
+          return;
+        }
+        
+        const sendPayload = () => {
+          if (!wsRef.current) return;
+          const finalTranscript = transcriptRef.current.trim();
+          if (finalTranscript) {
+            wsRef.current.send(JSON.stringify({ 
+              type: "text_input", 
+              text: finalTranscript,
+              wants_audio: true 
+            }));
+          } else {
+            wsRef.current.send(JSON.stringify({ type: "stop_speaking" }));
+          }
+        };
+
+        if (wsRef.current.readyState === WebSocket.OPEN) {
+          sendPayload();
+        } else if (wsRef.current.readyState === WebSocket.CONNECTING) {
+          wsRef.current.addEventListener('open', sendPayload, { once: true });
+        } else {
+          setIsLoading(false);
+        }
+      };
+      
       recognitionRef.current = recognition;
       recognition.start();
       
@@ -395,7 +425,7 @@ export default function TrainingPage() {
   };
 
   const handleStopRecording = () => {
-    if (!isRecording) return;
+    if (!isRecordingRef.current) return;
     setIsRecording(false);
     isRecordingRef.current = false;
     
@@ -403,35 +433,6 @@ export default function TrainingPage() {
       try {
         recognitionRef.current.stop();
       } catch(e) {}
-      recognitionRef.current = null;
-    }
-    
-    const sendPayload = () => {
-      if (!wsRef.current) return;
-      const finalTranscript = transcriptRef.current.trim();
-      if (finalTranscript) {
-        // We have text, send it with wants_audio flag to trigger backend TTS
-        wsRef.current.send(JSON.stringify({ 
-          type: "text_input", 
-          text: finalTranscript,
-          wants_audio: true 
-        }));
-      } else {
-        // Nothing was said
-        wsRef.current.send(JSON.stringify({ type: "stop_speaking" }));
-      }
-    };
-
-    if (wsRef.current) {
-      if (wsRef.current.readyState === WebSocket.OPEN) {
-        sendPayload();
-      } else if (wsRef.current.readyState === WebSocket.CONNECTING) {
-        wsRef.current.addEventListener('open', sendPayload, { once: true });
-      } else {
-        setIsLoading(false); // WS failed
-      }
-    } else {
-      setIsLoading(false);
     }
   };
 
@@ -450,68 +451,26 @@ export default function TrainingPage() {
     setIsTyping(true);
 
     try {
-      const res = await fetch("http://localhost:8000/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userText,
-          difficulty: "hard",
-          session_id: sessionId,
-          character: activeCharacter,
-          language: activeLanguage
-        }),
-      });
+      const ws = connectWebSocket();
+      
+      const sendMsg = () => {
+        if (!wsRef.current) return;
+        wsRef.current.send(JSON.stringify({ 
+          type: "text_input", 
+          text: userText,
+          wants_audio: true 
+        }));
+      };
 
-      if (!res.body) throw new Error("No response body");
-      
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        
-        for (const line of lines) {
-          if (line.trim().startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.trim().slice(6));
-              
-              if (data.type === 'feedback') {
-                setMessages(prev => {
-                  const newMsgs = [...prev];
-                  const userIdx = newMsgs.map(m => m.role).lastIndexOf("user");
-                  if (userIdx >= 0) newMsgs[userIdx].feedback = data.feedback;
-                  return newMsgs;
-                });
-              } else if (data.type === 'chunk') {
-                setMessages(prev => {
-                  const newMsgs = [...prev];
-                  const lastIdx = newMsgs.length - 1;
-                  newMsgs[lastIdx] = { ...newMsgs[lastIdx], content: newMsgs[lastIdx].content + data.content };
-                  return newMsgs;
-                });
-              } else if (data.type === 'emotion' || data.type === 'done') {
-                setCurrentEmotion(data.emotion);
-                setMessages(prev => {
-                  const newMsgs = [...prev];
-                  newMsgs[newMsgs.length - 1].emotion = data.emotion;
-                  return newMsgs;
-                });
-              }
-            } catch (e) {
-              console.error("Failed to parse SSE JSON chunk:", e, line);
-            }
-          }
-        }
+      if (ws.readyState === WebSocket.OPEN) {
+        sendMsg();
+      } else if (ws.readyState === WebSocket.CONNECTING) {
+        ws.addEventListener('open', sendMsg, { once: true });
+      } else {
+        throw new Error("WebSocket closed immediately");
       }
     } catch (err) {
       console.error("Chat error:", err);
-    } finally {
       setIsLoading(false);
       setIsTyping(false);
     }
