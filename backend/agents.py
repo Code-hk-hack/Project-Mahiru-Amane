@@ -187,7 +187,8 @@ class CoachAgent:
         mem0_context = ""
         if session_id and session_id != "default-session":
             try:
-                memories = mem0_client.search(user_message, user_id=session_id)
+                # Use a global demo user ID so memories persist across frontend refreshes/sessions
+                memories = mem0_client.search(user_message, user_id="hackathon_demo_user")
                 if memories:
                     memory_texts = [m.get('memory', m.get('text', str(m))) for m in memories if isinstance(m, dict)]
                     if memory_texts:
@@ -401,7 +402,7 @@ Valid emotions: {emotions_list}
                     f"{analyst_feedback.hesitation_count} hesitations, "
                     f"and passiveness score {analyst_feedback.passiveness_score}/10."
                 )
-                mem0_client.add(mem0_summary, user_id=session_id)
+                mem0_client.add(mem0_summary, user_id="hackathon_demo_user")
             except Exception as e:
                 print(f"Failed to store Mem0 memory: {e}")
 
