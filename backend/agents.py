@@ -22,6 +22,72 @@ class AnalystFeedback(BaseModel):
 _hr_knowledge_cache = None
 _mcp_raw_tools_cache = None
 
+try:
+    from mem0 import MemoryClient
+    MEM0_AVAILABLE = True
+except ImportError:
+    MEM0_AVAILABLE = False
+
+class Mem0Wrapper:
+    def __init__(self):
+        keys = os.environ.get("MEM0_API_KEYS", "")
+        self.api_keys = [k.strip() for k in keys.split(",") if k.strip()]
+        self.current_key_idx = 0
+        self.client = None
+        if self.api_keys and MEM0_AVAILABLE:
+            self._init_client()
+            
+    def _init_client(self):
+        if self.api_keys:
+            try:
+                self.client = MemoryClient(api_key=self.api_keys[self.current_key_idx])
+            except Exception as e:
+                print(f"Failed to init Mem0 client: {e}")
+
+    def _rotate_key(self):
+        if not self.api_keys:
+            return
+        self.current_key_idx = (self.current_key_idx + 1) % len(self.api_keys)
+        print(f"Rotating Mem0 API key to index {self.current_key_idx}")
+        self._init_client()
+
+    def search(self, query: str, user_id: str):
+        if not self.client or not self.api_keys:
+            return []
+        
+        for _ in range(len(self.api_keys)):
+            try:
+                results = self.client.search(query, user_id=user_id)
+                return results
+            except Exception as e:
+                err_str = str(e).lower()
+                if "429" in err_str or "rate limit" in err_str:
+                    print("Mem0 rate limit hit, rotating key...")
+                    self._rotate_key()
+                else:
+                    print(f"Mem0 search error: {e}")
+                    break
+        return []
+
+    def add(self, messages: str, user_id: str):
+        if not self.client or not self.api_keys:
+            return
+            
+        for _ in range(len(self.api_keys)):
+            try:
+                self.client.add(messages, user_id=user_id)
+                return
+            except Exception as e:
+                err_str = str(e).lower()
+                if "429" in err_str or "rate limit" in err_str:
+                    print("Mem0 rate limit hit, rotating key...")
+                    self._rotate_key()
+                else:
+                    print(f"Mem0 add error: {e}")
+                    break
+
+mem0_client = Mem0Wrapper()
+
 class AnalystAgent:
     @staticmethod
     def analyze(user_message: str) -> AnalystFeedback:
@@ -116,6 +182,17 @@ class CoachAgent:
         else:
             emotions_list = "waiting, waiting_2, happy, little_happy, very_happy, angry, concerned, sleepy, thinking"
             default_emotion = "waiting"
+
+        mem0_context = ""
+        if session_id and session_id != "default-session":
+            try:
+                memories = mem0_client.search(user_message, user_id=session_id)
+                if memories:
+                    memory_texts = [m.get('memory', m.get('text', str(m))) for m in memories if isinstance(m, dict)]
+                    if memory_texts:
+                        mem0_context = "\n\nPast context about this user:\n- " + "\n- ".join(memory_texts)
+            except Exception as e:
+                print(f"Failed to retrieve Mem0 memory: {e}")
             
         system_prompt = f"""
 You are the Coach Agent ({character.capitalize()}). The user is currently speaking in {lang_name}. YOU MUST REPLY ENTIRELY IN {lang_name}! 
@@ -123,6 +200,7 @@ You are the Coach Agent ({character.capitalize()}). The user is currently speaki
 - Keep responses short, concise, and highly conversational. Do not output markdown, bullet points, or lists. You are speaking verbally.
 - The No-Escapism Mandate is active: Do NOT engage in romantic roleplay. Do NOT be a yes-man.
 Current difficulty tier: {difficulty}. Adjust your personality (e.g., distracted, impatient, neutral) accordingly.
+{mem0_context}
 
 The Analyst Agent has provided this structural feedback on the user's last message:
 - Passiveness: {analyst_feedback.passiveness_score}/10
@@ -313,6 +391,18 @@ Valid emotions: {emotions_list}
                 }).execute()
             except Exception as e:
                 print(f"Failed to save messages to DB: {e}")
+                
+            try:
+                mem0_summary = (
+                    f"User message: '{user_message}'. "
+                    f"Coach response: '{full_response_text}'. "
+                    f"Analyst identified {analyst_feedback.apology_count} apologies, "
+                    f"{analyst_feedback.hesitation_count} hesitations, "
+                    f"and passiveness score {analyst_feedback.passiveness_score}/10."
+                )
+                mem0_client.add(mem0_summary, user_id=session_id)
+            except Exception as e:
+                print(f"Failed to store Mem0 memory: {e}")
 
         # Send final metadata event (emotion and cleaned text)
         yield {"type": "done", "emotion": emotion}
