@@ -201,6 +201,7 @@ export default function TrainingPage() {
     // Always close any existing WS so each voice turn gets a fresh connection
     if (wsRef.current) {
       if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+        (wsRef.current as any).aborted = true;
         wsRef.current.close();
       }
       wsRef.current = null;
@@ -224,7 +225,9 @@ export default function TrainingPage() {
     };
     
     ws.onerror = (err) => {
-      console.error("WebSocket error:", err);
+      if (!(ws as any).aborted) {
+        console.warn("WebSocket error:", err);
+      }
       setIsLoading(false);
       setIsTyping(false);
       setIsRecording(false);
@@ -355,7 +358,16 @@ export default function TrainingPage() {
       const ws = connectWebSocket();
       // Wait for WS to open if not already
       if (ws.readyState !== WebSocket.OPEN) {
-        await new Promise(resolve => ws.addEventListener('open', resolve, { once: true }));
+        await new Promise<void>((resolve, reject) => {
+          ws.addEventListener('open', () => resolve(), { once: true });
+          ws.addEventListener('error', () => reject(new Error("WS Error")), { once: true });
+        }).catch(err => console.warn("WS connect error:", err));
+      }
+      
+      if (ws.readyState !== WebSocket.OPEN) {
+        setIsLoading(false);
+        setIsRecording(false);
+        return;
       }
       
       // If user released the mic while connecting, abort and let the backend finish the turn.
@@ -438,9 +450,17 @@ export default function TrainingPage() {
     try {
       const ws = connectWebSocket();
       if (ws.readyState !== WebSocket.OPEN) {
-        await new Promise(resolve => ws.addEventListener('open', resolve, { once: true }));
+        await new Promise<void>((resolve, reject) => {
+          ws.addEventListener('open', () => resolve(), { once: true });
+          ws.addEventListener('error', () => reject(new Error("WS Error")), { once: true });
+        }).catch(err => console.warn("WS connect error:", err));
       }
-      ws.send(JSON.stringify({ type: "text_input", text: userText }));
+      
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "text_input", text: userText }));
+      } else {
+        throw new Error("WebSocket failed to open");
+      }
     } catch (err) {
       console.error("Chat error:", err);
       setIsLoading(false);
