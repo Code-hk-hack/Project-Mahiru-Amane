@@ -122,10 +122,9 @@ export default function TrainingPage() {
   const nextStartTimeRef = useRef<number>(0);
   const leftoverByteRef = useRef<Uint8Array | null>(null);
   const audioQueueRef = useRef<Promise<void>>(Promise.resolve());
-  
-  // Browser STT refs
-  const recognitionRef = useRef<any>(null);
-  const transcriptRef = useRef<string>("");
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const recordingAudioCtxRef = useRef<AudioContext | null>(null);
   const isRecordingRef = useRef(false);
   
   // Clean up on unmount
@@ -133,9 +132,8 @@ export default function TrainingPage() {
     return () => {
       if (wsRef.current) wsRef.current.close();
       if (audioCtxRef.current) audioCtxRef.current.close();
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch(e) {}
-      }
+      if (recordingAudioCtxRef.current) recordingAudioCtxRef.current.close();
+      if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach(t => t.stop());
     };
   }, []);
 
@@ -347,92 +345,71 @@ export default function TrainingPage() {
 
   const handleStartRecording = async () => {
     if (isLoading || isTyping) return;
-    
-    // Check for browser support
-    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Browser STT is not supported in this browser. Please use Chrome or Edge.");
-      return;
-    }
-
     try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
       setIsRecording(true);
       isRecordingRef.current = true;
       setIsLoading(true); // Prevent text sending while recording
-      transcriptRef.current = "";
       
-      // Connect WS but don't await it to preserve the user gesture for SpeechRecognition
-      connectWebSocket();
+      const ws = connectWebSocket();
+      // Wait for WS to open if not already
+      if (ws.readyState !== WebSocket.OPEN) {
+        await new Promise(resolve => ws.addEventListener('open', resolve, { once: true }));
+      }
       
-      const recognition = new SpeechRecognition();
-      recognition.lang = activeLanguage;
-      recognition.continuous = true;
-      recognition.interimResults = true;
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      recordingAudioCtxRef.current = audioCtx;
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
+      const source = audioCtx.createMediaStreamSource(stream);
+      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
       
-      recognition.onresult = (event: any) => {
-        let currentTranscript = "";
-        for (let i = 0; i < event.results.length; i++) {
-          currentTranscript += event.results[i][0].transcript;
+      scriptProcessorRef.current = processor;
+      
+      processor.onaudioprocess = (e) => {
+        if (!isRecordingRef.current) return;
+        const inputData = e.inputBuffer.getChannelData(0);
+        const pcmData = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          const s = Math.max(-1, Math.min(1, inputData[i]));
+          pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
         }
-        transcriptRef.current = currentTranscript;
-      };
-      
-      recognition.onerror = (event: any) => {
-        console.error("Speech recognition error", event.error);
-        if (event.error === 'not-allowed') {
-          alert("Microphone access was denied. Please allow microphone access to use voice chat.");
-        }
-      };
-      
-      recognition.onend = () => {
-        recognitionRef.current = null;
-        if (!wsRef.current) {
-          setIsLoading(false);
-          return;
-        }
-        
-        const sendPayload = () => {
-          if (!wsRef.current) return;
-          const finalTranscript = transcriptRef.current.trim();
-          if (finalTranscript) {
-            wsRef.current.send(JSON.stringify({ 
-              type: "text_input", 
-              text: finalTranscript,
-              wants_audio: true 
-            }));
-          } else {
-            wsRef.current.send(JSON.stringify({ type: "stop_speaking" }));
-          }
-        };
-
-        if (wsRef.current.readyState === WebSocket.OPEN) {
-          sendPayload();
-        } else if (wsRef.current.readyState === WebSocket.CONNECTING) {
-          wsRef.current.addEventListener('open', sendPayload, { once: true });
-        } else {
-          setIsLoading(false);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(pcmData.buffer);
         }
       };
       
-      recognitionRef.current = recognition;
-      recognition.start();
-      
+      source.connect(processor);
+      processor.connect(audioCtx.destination);
     } catch (e) {
-      console.error("Failed to start speech recognition", e);
+      console.error("Failed to access microphone", e);
       setIsLoading(false);
       setIsRecording(false);
     }
   };
 
   const handleStopRecording = () => {
-    if (!isRecordingRef.current) return;
+    if (!isRecording) return;
     setIsRecording(false);
     isRecordingRef.current = false;
     
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch(e) {}
+    if (scriptProcessorRef.current) {
+      scriptProcessorRef.current.disconnect();
+      scriptProcessorRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(t => t.stop());
+      mediaStreamRef.current = null;
+    }
+    if (recordingAudioCtxRef.current) {
+      recordingAudioCtxRef.current.close();
+      recordingAudioCtxRef.current = null;
+    }
+    
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: "stop_speaking" }));
     }
   };
 
@@ -451,26 +428,68 @@ export default function TrainingPage() {
     setIsTyping(true);
 
     try {
-      const ws = connectWebSocket();
-      
-      const sendMsg = () => {
-        if (!wsRef.current) return;
-        wsRef.current.send(JSON.stringify({ 
-          type: "text_input", 
-          text: userText,
-          wants_audio: true 
-        }));
-      };
+      const res = await fetch("http://localhost:8000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userText,
+          difficulty: "hard",
+          session_id: sessionId,
+          character: activeCharacter,
+          language: activeLanguage
+        }),
+      });
 
-      if (ws.readyState === WebSocket.OPEN) {
-        sendMsg();
-      } else if (ws.readyState === WebSocket.CONNECTING) {
-        ws.addEventListener('open', sendMsg, { once: true });
-      } else {
-        throw new Error("WebSocket closed immediately");
+      if (!res.body) throw new Error("No response body");
+      
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (line.trim().startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.trim().slice(6));
+              
+              if (data.type === 'feedback') {
+                setMessages(prev => {
+                  const newMsgs = [...prev];
+                  const userIdx = newMsgs.map(m => m.role).lastIndexOf("user");
+                  if (userIdx >= 0) newMsgs[userIdx].feedback = data.feedback;
+                  return newMsgs;
+                });
+              } else if (data.type === 'chunk') {
+                setMessages(prev => {
+                  const newMsgs = [...prev];
+                  const lastIdx = newMsgs.length - 1;
+                  newMsgs[lastIdx] = { ...newMsgs[lastIdx], content: newMsgs[lastIdx].content + data.content };
+                  return newMsgs;
+                });
+              } else if (data.type === 'emotion' || data.type === 'done') {
+                setCurrentEmotion(data.emotion);
+                setMessages(prev => {
+                  const newMsgs = [...prev];
+                  newMsgs[newMsgs.length - 1].emotion = data.emotion;
+                  return newMsgs;
+                });
+              }
+            } catch (e) {
+              console.error("Failed to parse SSE JSON chunk:", e, line);
+            }
+          }
+        }
       }
     } catch (err) {
       console.error("Chat error:", err);
+    } finally {
       setIsLoading(false);
       setIsTyping(false);
     }
@@ -618,17 +637,14 @@ export default function TrainingPage() {
                   disabled={isLoading || isTyping || isRecording}
                 />
                 
-                <button
-                  className={`w-12 h-12 rounded-full transition-all duration-200 shadow-md flex items-center justify-center border-0 ${
-                    isRecording 
-                      ? 'bg-red-500 hover:bg-red-600 scale-110 animate-pulse' 
-                      : 'bg-white hover:bg-gray-100 text-gray-700'
-                  }`}
+                <button 
+                  suppressHydrationWarning
+                  className={`p-3 rounded-full transition-all duration-300 shadow-sm ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' : isLoading || isTyping ? 'bg-[var(--surface-low)] text-[var(--text-secondary)] opacity-50' : 'bg-gradient-to-r from-[#D4AF37] to-[#B5952F] text-white hover:shadow-[0_4px_15px_rgba(212,175,55,0.4)] hover:-translate-y-0.5'}`}
                   onMouseDown={handleStartRecording}
                   onMouseUp={handleStopRecording}
                   onMouseLeave={handleStopRecording}
-                  disabled={(isLoading || isTyping) && !isRecording}
-                  title="Hold to speak"
+                  disabled={isLoading && !isRecording}
+                  title="Hold to Speak"
                 >
                   <Mic className="w-5 h-5" />
                 </button>

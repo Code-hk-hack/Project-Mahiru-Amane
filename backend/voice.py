@@ -24,11 +24,11 @@ class VoiceManager:
     async def transcribe_audio_stream(self, audio_chunk_generator: AsyncGenerator[bytes, None], language: str = "en-IN") -> str:
         """
         Gathers all PCM audio chunks, builds an in-memory WAV file,
-        and sends it to Groq Whisper API for extremely fast transcription.
+        and sends it to Gnani STT API.
         """
-        groq_api_key = os.environ.get("GROQ_API_KEY")
-        if not groq_api_key:
-            raise RuntimeError("GROQ_API_KEY not set. Cannot use STT.")
+        if not self.api_key:
+            print("WARNING: GNANI_API_KEY not set. Cannot use STT.")
+            return ""
 
         pcm_data = bytearray()
         async for chunk in audio_chunk_generator:
@@ -46,16 +46,17 @@ class VoiceManager:
                 wav_file.writeframes(pcm_data)
             
             wav_io.seek(0)
+            wav_io.name = "audio.wav"
             
-            whisper_lang = language.split('-')[0]
+            import asyncio
+            from gnani.stt import GnaniSTTClient
             
-            client = AsyncGroq(api_key=groq_api_key)
-            transcription = await client.audio.transcriptions.create(
-                file=("audio.wav", wav_io.read()),
-                model="whisper-large-v3",
-                language=whisper_lang,
-            )
-            return transcription.text.strip()
+            def call_gnani():
+                client = GnaniSTTClient(api_key=self.api_key)
+                return client.transcribe(audio=wav_io, language_code=language)
+            
+            res = await asyncio.to_thread(call_gnani)
+            return res.get("transcript", "").strip()
             
         except Exception as e:
             print(f"STT Error: {e}")
