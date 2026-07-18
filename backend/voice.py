@@ -76,32 +76,17 @@ class VoiceManager:
         try:
             async with GnaniTTSRealtimeClient(api_key=self.api_key) as client:
                 audio_cfg = AudioConfig(sample_rate=16000, encoding='linear_pcm', container='raw')
-                sentence_buffer = ""
+                full_text = ""
                 
                 async for text_chunk in text_chunk_generator:
-                    sentence_buffer += text_chunk
-                    
-                    if "<emotion" in sentence_buffer.lower():
-                        parts = re.split(r'<emotion', sentence_buffer, flags=re.IGNORECASE)
-                        clean_text = parts[0]
-                        if clean_text.strip():
-                            async for audio_chunk in client.synthesize(clean_text.strip(), voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
-                                yield audio_chunk
-                        sentence_buffer = ""
-                        break 
-                    
-                    # More granular chunks for faster TTS streaming
-                    if any(p in sentence_buffer for p in ['.', '?', '!', '\n']):
-                        if sentence_buffer.strip():
-                            async for audio_chunk in client.synthesize(sentence_buffer.strip(), voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
-                                yield audio_chunk
-                        sentence_buffer = ""
+                    full_text += text_chunk
                 
-                if sentence_buffer.strip():
-                    clean_text = re.sub(r'<emotion.*', '', sentence_buffer, flags=re.IGNORECASE)
-                    if clean_text.strip():
-                        async for audio_chunk in client.synthesize(clean_text.strip(), voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
-                            yield audio_chunk
+                # We do a final strip of emotion tags in case any leaked through the generator
+                clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>|<\s*[a-z_]+\s*>", "", full_text, flags=re.IGNORECASE).strip()
+                
+                if clean_text:
+                    async for audio_chunk in client.synthesize(clean_text, voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
+                        yield audio_chunk
                         
         except Exception as e:
             print(f"TTS Error: {e}")
