@@ -83,18 +83,31 @@ export default function LandingPage() {
           Let Mahiru guide your words. Using strict evaluation rubrics wrapped in a warm, elegant interface, she will gently correct hesitation and passive language.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-6 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center">
           <Link href="/training" className="w-full sm:w-auto">
             <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[var(--primary-color)] text-white px-8 py-4 rounded-full text-[15px] font-bold hover:bg-[#B5952F] hover:shadow-[0_4px_20px_rgba(212,175,55,0.4)] transition-all duration-300 transform hover:-translate-y-1">
-              Begin Evaluation
+              Continue Active Session
               <ArrowRight className="w-4 h-4" />
             </button>
           </Link>
           
-          <Link href="/dashboard" className="w-full sm:w-auto">
-            <button className="w-full sm:w-auto px-8 py-4 bg-white border border-[var(--primary-color)]/20 hover:border-[var(--primary-color)]/50 hover:bg-white/80 rounded-full transition-all duration-300 text-[15px] font-bold text-[var(--text-primary)] shadow-sm backdrop-blur-sm">
-              View Progress
-            </button>
+          <button 
+            onClick={() => {
+              localStorage.setItem('mahiru_session_id', crypto.randomUUID());
+              localStorage.setItem('amane_session_id', crypto.randomUUID());
+              window.location.href = '/training';
+            }}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-white border border-[var(--primary-color)]/20 hover:border-[var(--primary-color)]/50 hover:bg-white/80 rounded-full transition-all duration-300 text-[15px] font-bold text-[var(--text-primary)] shadow-sm backdrop-blur-sm"
+          >
+            <Sparkles className="w-4 h-4 text-[var(--primary-color)]" />
+            Start New Session
+          </button>
+        </div>
+
+        <div className="mt-8">
+          <Link href="/dashboard" className="text-[var(--text-secondary)] hover:text-[var(--primary-color)] text-sm font-semibold transition-colors flex items-center gap-2">
+            View Progress Dashboard
+            <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </motion.main>
