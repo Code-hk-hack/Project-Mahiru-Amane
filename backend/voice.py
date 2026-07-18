@@ -81,28 +81,23 @@ class VoiceManager:
                 async for text_chunk in text_chunk_generator:
                     sentence_buffer += text_chunk
                     
-                    if any(p in sentence_buffer for p in ['.', '?', '!', '\n']):
+                    if any(p in sentence_buffer for p in ['.', '?', '!', '\n', '।', '॥']):
                         clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>|<\s*(?!emotion\b)[a-z_]+\s*>", "", sentence_buffer, flags=re.IGNORECASE).strip()
                         if clean_text:
-                            # Accumulate audio for the entire sentence to prevent popping from tiny websocket buffers
-                            sentence_audio = bytearray()
-                            gnani_lang = language.split('-')[0]
+                            # Stream audio chunks directly to frontend for zero latency
+                            gnani_lang = language
                             async for audio_chunk in client.synthesize(clean_text, voice=tts_voice, model="timbre-v2.5", language=gnani_lang, audio_config=audio_cfg):
-                                sentence_audio.extend(audio_chunk)
-                            if sentence_audio:
-                                yield bytes(sentence_audio)
+                                if audio_chunk:
+                                    yield bytes(audio_chunk)
                         sentence_buffer = ""
                 
                 # Final flush
                 if sentence_buffer.strip():
                     clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>|<\s*(?!emotion\b)[a-z_]+\s*>", "", sentence_buffer, flags=re.IGNORECASE).strip()
                     if clean_text:
-                        sentence_audio = bytearray()
-                        gnani_lang = language.split('-')[0]
-                        async for audio_chunk in client.synthesize(clean_text, voice=tts_voice, model="timbre-v2.5", language=gnani_lang, audio_config=audio_cfg):
-                            sentence_audio.extend(audio_chunk)
-                        if sentence_audio:
-                            yield bytes(sentence_audio)
+                        async for audio_chunk in client.synthesize(clean_text, voice=tts_voice, model="timbre-v2.5", language=language, audio_config=audio_cfg):
+                            if audio_chunk:
+                                yield bytes(audio_chunk)
                         
         except Exception as e:
             print(f"TTS Error: {e}")

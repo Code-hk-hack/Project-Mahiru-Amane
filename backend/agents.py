@@ -23,70 +23,71 @@ _hr_knowledge_cache = None
 _mcp_raw_tools_cache = None
 
 try:
-    from mem0 import MemoryClient
-    MEM0_AVAILABLE = True
+    from alchemyst_ai import AlchemystAI
+    ALCHEMYST_AVAILABLE = True
 except ImportError:
-    MEM0_AVAILABLE = False
+    ALCHEMYST_AVAILABLE = False
 
-class Mem0Wrapper:
+class AlchemystWrapper:
     def __init__(self):
-        keys = os.environ.get("MEM0_API_KEYS", "")
-        self.api_keys = [k.strip() for k in keys.split(",") if k.strip()]
-        self.current_key_idx = 0
+        self.api_key = os.environ.get("ALCHEMYST_AI_API_KEY", "").strip()
         self.client = None
-        if self.api_keys and MEM0_AVAILABLE:
-            self._init_client()
-            
-    def _init_client(self):
-        if self.api_keys:
+        if self.api_key and ALCHEMYST_AVAILABLE:
             try:
-                self.client = MemoryClient(api_key=self.api_keys[self.current_key_idx])
+                self.client = AlchemystAI(api_key=self.api_key)
             except Exception as e:
-                print(f"Failed to init Mem0 client: {e}")
-
-    def _rotate_key(self):
-        if not self.api_keys:
-            return
-        self.current_key_idx = (self.current_key_idx + 1) % len(self.api_keys)
-        print(f"Rotating Mem0 API key to index {self.current_key_idx}")
-        self._init_client()
+                print(f"Failed to init Alchemyst client: {e}")
 
     def search(self, query: str, user_id: str):
-        if not self.client or not self.api_keys:
+        if not self.client:
             return []
-        
-        for _ in range(len(self.api_keys)):
-            try:
-                results = self.client.search(query, user_id=user_id)
-                return results
-            except Exception as e:
-                err_str = str(e).lower()
-                if "429" in err_str or "rate limit" in err_str:
-                    print("Mem0 rate limit hit, rotating key...")
-                    self._rotate_key()
-                else:
-                    print(f"Mem0 search error: {e}")
-                    break
-        return []
+        try:
+            # Note: According to Alchemyst SDK docs, search returns a response object with matches or similar
+            results = self.client.v1.context.search(
+                query=query,
+                similarity_threshold=0.6,
+                scope="internal",
+                body_metadata={
+                    "group_name": [user_id]
+                }
+            )
+            # Handle different possible return formats of the SDK
+            if hasattr(results, 'data'):
+                return [getattr(doc, 'content', str(doc)) for doc in results.data]
+            elif isinstance(results, list):
+                return [doc.get("content", str(doc)) if isinstance(doc, dict) else getattr(doc, 'content', str(doc)) for doc in results]
+            elif hasattr(results, 'matches'):
+                return [getattr(doc, 'content', str(doc)) for doc in results.matches]
+            return [str(results)] # Fallback
+        except Exception as e:
+            print(f"Alchemyst search error: {e}")
+            return []
 
     def add(self, messages: str, user_id: str):
-        if not self.client or not self.api_keys:
+        if not self.client:
             return
-            
-        for _ in range(len(self.api_keys)):
-            try:
-                self.client.add(messages, user_id=user_id)
-                return
-            except Exception as e:
-                err_str = str(e).lower()
-                if "429" in err_str or "rate limit" in err_str:
-                    print("Mem0 rate limit hit, rotating key...")
-                    self._rotate_key()
-                else:
-                    print(f"Mem0 add error: {e}")
-                    break
+        try:
+            self.client.v1.context.add(
+                documents=[
+                    {
+                        "content": messages,
+                        "metadata": {
+                            "file_name": f"memory_{user_id}.txt",
+                            "file_type": "text/plain"
+                        }
+                    }
+                ],
+                source="hackathon_simulator",
+                context_type="conversation",
+                scope="internal",
+                metadata={
+                    "group_name": [user_id]
+                }
+            )
+        except Exception as e:
+            print(f"Alchemyst add error: {e}")
 
-mem0_client = Mem0Wrapper()
+alchemyst_client = AlchemystWrapper()
 
 class AnalystAgent:
     @staticmethod
@@ -178,7 +179,7 @@ class CoachAgent:
             ensure_session_exists(db, session_id)
             
         if character.lower() == "amane":
-            emotions_list = "impressed, impressed_starlted, sad, sad_notimpressed, shy, sleepy, small_smile, starlted, startled_happy_joy, happy"
+            emotions_list = "impressed, impressed_startled, sad, sad_notimpressed, shy, sleepy, small_smile, startled, startled_happy_joy, happy"
             default_emotion = "happy"
         else:
             emotions_list = "waiting, waiting_2, happy, little_happy, very_happy, angry, concerned, sleepy, thinking"
@@ -188,16 +189,18 @@ class CoachAgent:
         if session_id and session_id != "default-session":
             try:
                 # Use a global demo user ID so memories persist across frontend refreshes/sessions
-                memories = mem0_client.search(user_message, user_id="hackathon_demo_user")
+                memories = alchemyst_client.search(user_message, user_id="hackathon_demo_user")
                 if memories:
                     memory_texts = [m.get('memory', m.get('text', str(m))) for m in memories if isinstance(m, dict)]
                     if memory_texts:
                         mem0_context = "\n\nPast context about this user:\n- " + "\n- ".join(memory_texts)
             except Exception as e:
-                print(f"Failed to retrieve Mem0 memory: {e}")
+                print(f"Failed to retrieve Alchemyst memory: {e}")
             
         system_prompt = f"""
-You are the Coach Agent ({character.capitalize()}). The user is currently speaking in {lang_name}. YOU MUST REPLY ENTIRELY IN {lang_name}! 
+You are the Coach Agent ({character.capitalize()}). The user is currently speaking in {lang_name}. 
+CRITICAL RULE: YOU MUST REPLY ENTIRELY IN {lang_name} using its native script (e.g., Devanagari for Hindi, Tamil script for Tamil). 
+Do NOT use English words or Latin letters in your response! Translate everything to {lang_name}.
 - Your character is {character.capitalize()}. Embody this persona fully.
 - Keep responses short, concise, and highly conversational. Do not output markdown, bullet points, or lists. You are speaking verbally.
 - The No-Escapism Mandate is active: Do NOT engage in romantic roleplay. Do NOT be a yes-man.
@@ -211,12 +214,14 @@ The Analyst Agent has provided this structural feedback on the user's last messa
 - Notes: {analyst_feedback.feedback_notes}
 
 Address the user's message naturally in character, but weave in a harsh but constructive critique based on the Analyst's notes.
-If you need to perform an action for the user (like sending an email or checking a calendar), you MUST use the provided tools.
+If you need to perform an action for the user (like sending an email or checking a calendar), you MUST use the provided tools. ONLY use tools if EXPLICITLY requested by the user. Do NOT hallucinate or volunteer tool usage.
 
 CRITICAL INSTRUCTION: You must respond in plain text, speaking directly to the user.
 IMPORTANT: Keep your response very brief (2 or 3 short sentences MAX).
 AT THE VERY BEGINNING of your response, you must prepend an emotion tag like this: <emotion>happy</emotion>.
 Valid emotions: {emotions_list}
+
+FINAL WARNING: You MUST translate and output your entire response ONLY in {lang_name} using its native script! DO NOT reply in English.
 """
         messages = [SystemMessage(content=system_prompt)]
         
@@ -235,7 +240,7 @@ Valid emotions: {emotions_list}
             except Exception as e:
                 print(f"Failed to fetch history: {e}")
 
-        messages.append(HumanMessage(content=user_message))
+        messages.append(HumanMessage(content=f"[System Reminder: The user is speaking {lang_name}. You MUST reply ONLY in {lang_name} script.]\n\nUser: {user_message}"))
 
         groq_api_key = os.environ.get("GROQ_API_KEY")
         gemini_api_key = os.environ.get("GEMINI_API_KEY")
@@ -346,30 +351,26 @@ Valid emotions: {emotions_list}
                         "id": tc["id"]
                     })
                 
-                # Add AIMessage with tool calls
+                # Execute tool calls
                 messages.append(AIMessage(content="", tool_calls=reconstructed_tool_calls))
-                
-                # Execute tools
                 for tc in reconstructed_tool_calls:
-                    tool_name = tc["name"]
-                    tool_args = tc["args"]
-                    tool_id = tc["id"]
-                    
-                    tool_result_text = "Tool failed."
+                    tool_result = "Tool execution failed."
                     if mcp_session:
                         try:
-                            result = await mcp_session.call_tool(tool_name, tool_args)
-                            tool_result_text = str(result.content)
+                            result = await mcp_session.call_tool(tc["name"], arguments=tc["args"])
+                            if result.content and len(result.content) > 0:
+                                tool_result = result.content[0].text
                         except Exception as e:
-                            tool_result_text = f"Error: {e}"
-                            
-                    messages.append(ToolMessage(tool_call_id=tool_id, name=tool_name, content=tool_result_text))
+                            tool_result = f"Error: {e}"
+                    messages.append(ToolMessage(tool_call_id=tc["id"], name=tc["name"], content=tool_result))
                 
-                # Continue loop to stream the final response after tool execution
+                # Continue loop to generate next response
                 continue
-            
-            # If no tool calls, we are done streaming text. Break out of loop.
-            break
+            else:
+                break
+                
+        if not full_response_text:
+            yield {"type": "chunk", "content": "I don't have anything to add to that right now."}
 
         # Extract emotion from tags
         emotion_match = re.search(r"<\s*emotion\s*>([a-z_\s]+)<\s*/\s*emotion\s*>|<\s*([a-z_]+)\s*>", full_response_text, re.IGNORECASE)
@@ -407,9 +408,9 @@ Valid emotions: {emotions_list}
                     f"{analyst_feedback.hesitation_count} hesitations, "
                     f"and passiveness score {analyst_feedback.passiveness_score}/10."
                 )
-                mem0_client.add(mem0_summary, user_id="hackathon_demo_user")
+                alchemyst_client.add(mem0_summary, user_id="hackathon_demo_user")
             except Exception as e:
-                print(f"Failed to store Mem0 memory: {e}")
+                print(f"Failed to store Alchemyst memory: {e}")
 
         # Send final metadata event (emotion and cleaned text)
         yield {"type": "done", "emotion": emotion}

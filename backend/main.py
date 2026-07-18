@@ -122,7 +122,7 @@ async def websocket_voice_chat(
                     # 2. Transcribe incoming audio
                     print("Starting transcription of audio stream...")
                     transcript = await voice_manager.transcribe_audio_stream(receive_audio(), language=language)
-                    print(f"Transcription result: '{transcript}'")
+                    print(f"Transcription result: {repr(transcript)}")
                 
                 if not transcript:
                     print("No transcript (empty or silence). Sending turn_complete.")

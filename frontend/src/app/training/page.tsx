@@ -45,7 +45,7 @@ const TypewriterText = ({ text, onComplete }: { text: string, onComplete?: () =>
     const safeText = text || "";
     
     if (iRef.current >= safeText.length) {
-      if (safeText.length > 0 && onCompleteRef.current) {
+      if (onCompleteRef.current) {
         onCompleteRef.current();
       }
       return;
@@ -120,6 +120,8 @@ export default function TrainingPage() {
   const wsRef = useRef<WebSocket | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef<number>(0);
+  const leftoverByteRef = useRef<Uint8Array | null>(null);
+  const audioQueueRef = useRef<Promise<void>>(Promise.resolve());
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
   const recordingAudioCtxRef = useRef<AudioContext | null>(null);
@@ -196,60 +198,102 @@ export default function TrainingPage() {
   }, [messages]);
 
   const connectWebSocket = () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return wsRef.current;
+    // Always close any existing WS so each voice turn gets a fresh connection
+    if (wsRef.current) {
+      if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+        wsRef.current.close();
+      }
+      wsRef.current = null;
+    }
+    
+    // Reset audio playback state for the new turn
+    leftoverByteRef.current = null;
+    audioQueueRef.current = Promise.resolve();
+    if (audioCtxRef.current) {
+      nextStartTimeRef.current = audioCtxRef.current.currentTime;
+    }
     
     const ws = new WebSocket(`ws://localhost:8000/ws/voice-chat?session_id=${sessionId}&character=${activeCharacter}&difficulty=hard&language=${activeLanguage}`);
     wsRef.current = ws;
     
+    ws.onclose = () => {
+      // If WS closes unexpectedly, unlock the UI
+      if (wsRef.current === ws) {
+        wsRef.current = null;
+      }
+    };
+    
+    ws.onerror = (err) => {
+      console.error("WebSocket error:", err);
+      setIsLoading(false);
+      setIsTyping(false);
+      setIsRecording(false);
+      isRecordingRef.current = false;
+    };
+    
     ws.onmessage = async (event) => {
       if (event.data instanceof Blob) {
         // Binary audio chunk (TTS)
-        const arrayBuffer = await event.data.arrayBuffer();
-        if (!audioCtxRef.current) {
-          audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-          nextStartTimeRef.current = audioCtxRef.current.currentTime;
-        }
-        
-        const ctx = audioCtxRef.current;
-        if (ctx.state === 'suspended') await ctx.resume();
-        
-        let buffer = arrayBuffer;
-        
-        // Strip WAV header if present (44 bytes starting with "RIFF")
-        if (buffer.byteLength >= 44) {
-          const view = new DataView(buffer);
-          if (view.getUint32(0, false) === 0x52494646) { // "RIFF"
-            buffer = buffer.slice(44);
+        audioQueueRef.current = audioQueueRef.current.then(async () => {
+          const arrayBuffer = await event.data.arrayBuffer();
+          if (!audioCtxRef.current) {
+            audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+            nextStartTimeRef.current = audioCtxRef.current.currentTime;
           }
-        }
-        
-        if (buffer.byteLength % 2 !== 0) {
-          buffer = buffer.slice(0, buffer.byteLength - 1);
-        }
-        
-        const int16 = new Int16Array(buffer);
-        const float32 = new Float32Array(int16.length);
-        for (let i = 0; i < int16.length; i++) {
-          float32[i] = int16[i] / 0x8000;
-        }
-        
-        const audioBuffer = ctx.createBuffer(1, float32.length, 16000);
-        audioBuffer.getChannelData(0).set(float32);
-        
-        const source = ctx.createBufferSource();
-        source.buffer = audioBuffer;
-        
-        // Slow down speech slightly for a more relaxed and understandable coach voice
-        const playbackSpeed = 0.90;
-        source.playbackRate.value = playbackSpeed;
-        
-        source.connect(ctx.destination);
-        
-        const startTime = Math.max(ctx.currentTime, nextStartTimeRef.current);
-        source.start(startTime);
-        
-        // Adjust the next start time accounting for the slowed playback rate
-        nextStartTimeRef.current = startTime + (audioBuffer.duration / playbackSpeed);
+          
+          const ctx = audioCtxRef.current;
+          if (ctx.state === 'suspended') await ctx.resume();
+          
+          let bufferToProcess = new Uint8Array(arrayBuffer);
+          if (leftoverByteRef.current) {
+            const combined = new Uint8Array(leftoverByteRef.current.length + bufferToProcess.length);
+            combined.set(leftoverByteRef.current, 0);
+            combined.set(bufferToProcess, leftoverByteRef.current.length);
+            bufferToProcess = combined;
+            leftoverByteRef.current = null;
+          }
+          
+          if (bufferToProcess.length % 2 !== 0) {
+            leftoverByteRef.current = bufferToProcess.slice(bufferToProcess.length - 1);
+            bufferToProcess = bufferToProcess.slice(0, bufferToProcess.length - 1);
+          }
+          
+          let buffer = bufferToProcess.buffer.slice(bufferToProcess.byteOffset, bufferToProcess.byteOffset + bufferToProcess.byteLength);
+          
+          // Strip WAV header if present (44 bytes starting with "RIFF")
+          if (buffer.byteLength >= 44) {
+            const view = new DataView(buffer);
+            if (view.getUint32(0, false) === 0x52494646) { // "RIFF"
+              buffer = buffer.slice(44);
+            }
+          }
+          
+          const int16 = new Int16Array(buffer);
+          const float32 = new Float32Array(int16.length);
+          for (let i = 0; i < int16.length; i++) {
+            float32[i] = int16[i] / 0x8000;
+          }
+          
+          if (float32.length === 0) return;
+          
+          const audioBuffer = ctx.createBuffer(1, float32.length, 16000);
+          audioBuffer.getChannelData(0).set(float32);
+          
+          const source = ctx.createBufferSource();
+          source.buffer = audioBuffer;
+          
+          // Slow down speech slightly for a more relaxed and understandable coach voice
+          const playbackSpeed = 0.90;
+          source.playbackRate.value = playbackSpeed;
+          
+          source.connect(ctx.destination);
+          
+          const startTime = Math.max(ctx.currentTime, nextStartTimeRef.current);
+          source.start(startTime);
+          
+          // Adjust the next start time accounting for the slowed playback rate
+          nextStartTimeRef.current = startTime + (audioBuffer.duration / playbackSpeed);
+        }).catch(err => console.error("Audio playback error:", err));
       } else {
         // Text message
         try {
@@ -282,6 +326,13 @@ export default function TrainingPage() {
             });
           } else if (data.type === 'turn_complete') {
             setIsLoading(false);
+            setIsTyping(false);
+            // Close WS after turn is complete so next mic press gets a fresh connection
+            ws.close();
+          } else if (data.type === 'error') {
+            console.error("Server error:", data.content);
+            setIsLoading(false);
+            setIsTyping(false);
           }
         } catch (e) {
           console.error("Failed to parse WS message", e);
@@ -393,39 +444,45 @@ export default function TrainingPage() {
       
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = '';
       
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
         
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = JSON.parse(line.slice(6));
-            
-            if (data.type === 'feedback') {
-              setMessages(prev => {
-                const newMsgs = [...prev];
-                const userIdx = newMsgs.map(m => m.role).lastIndexOf("user");
-                if (userIdx >= 0) newMsgs[userIdx].feedback = data.feedback;
-                return newMsgs;
-              });
-            } else if (data.type === 'chunk') {
-              setMessages(prev => {
-                const newMsgs = [...prev];
-                const lastIdx = newMsgs.length - 1;
-                newMsgs[lastIdx] = { ...newMsgs[lastIdx], content: newMsgs[lastIdx].content + data.content };
-                return newMsgs;
-              });
-            } else if (data.type === 'emotion' || data.type === 'done') {
-              setCurrentEmotion(data.emotion);
-              setMessages(prev => {
-                const newMsgs = [...prev];
-                newMsgs[newMsgs.length - 1].emotion = data.emotion;
-                return newMsgs;
-              });
+          if (line.trim().startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.trim().slice(6));
+              
+              if (data.type === 'feedback') {
+                setMessages(prev => {
+                  const newMsgs = [...prev];
+                  const userIdx = newMsgs.map(m => m.role).lastIndexOf("user");
+                  if (userIdx >= 0) newMsgs[userIdx].feedback = data.feedback;
+                  return newMsgs;
+                });
+              } else if (data.type === 'chunk') {
+                setMessages(prev => {
+                  const newMsgs = [...prev];
+                  const lastIdx = newMsgs.length - 1;
+                  newMsgs[lastIdx] = { ...newMsgs[lastIdx], content: newMsgs[lastIdx].content + data.content };
+                  return newMsgs;
+                });
+              } else if (data.type === 'emotion' || data.type === 'done') {
+                setCurrentEmotion(data.emotion);
+                setMessages(prev => {
+                  const newMsgs = [...prev];
+                  newMsgs[newMsgs.length - 1].emotion = data.emotion;
+                  return newMsgs;
+                });
+              }
+            } catch (e) {
+              console.error("Failed to parse SSE JSON chunk:", e, line);
             }
           }
         }
@@ -434,6 +491,7 @@ export default function TrainingPage() {
       console.error("Chat error:", err);
     } finally {
       setIsLoading(false);
+      setIsTyping(false);
     }
   };
 
