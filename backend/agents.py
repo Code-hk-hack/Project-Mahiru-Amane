@@ -107,7 +107,7 @@ class AnalystAgent:
         groq_api_key = os.environ.get("GROQ_API_KEY")
         primary_llm = ChatGroq(
             model="llama-3.3-70b-versatile",
-            api_key=SecretStr(groq_api_key) if groq_api_key else None,
+            api_key=SecretStr(groq_api_key) if groq_api_key is not None else None,
             temperature=0.1
         )
         
@@ -144,8 +144,9 @@ def ensure_session_exists(db, session_id: str):
         res = db.table('sessions').select('id').eq('id', session_id).execute()
         if not res.data:
             user_res = db.table('users').insert({"username": f"user_{session_id[:8]}"}).execute()
-            user_id = user_res.data[0]['id']
-            db.table('sessions').insert({"id": session_id, "user_id": user_id, "session_title": "Chat"}).execute()
+            if user_res.data:
+                user_id = user_res.data[0]['id']
+                db.table('sessions').insert({"id": session_id, "user_id": user_id, "session_title": "Chat"}).execute()
     except Exception as e:
         print(f"Error ensuring session exists: {e}")
 
@@ -242,7 +243,7 @@ Valid emotions: {emotions_list}
         # Primary LLM: Groq with 70b-versatile
         primary_llm = ChatGroq(
             model="llama-3.3-70b-versatile",
-            api_key=SecretStr(groq_api_key) if groq_api_key else None,
+            api_key=SecretStr(groq_api_key) if groq_api_key is not None else None,
             temperature=0.7
         )
         
