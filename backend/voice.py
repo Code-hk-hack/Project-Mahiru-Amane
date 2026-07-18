@@ -1,13 +1,14 @@
 import os
 import re
+import io
+import wave
 from typing import AsyncGenerator
+from groq import AsyncGroq
 
 try:
-    from gnani.stt import GnaniSTTStreamClient
     from gnani.tts import GnaniTTSRealtimeClient, AudioConfig
     GNANI_AVAILABLE = True
 except ImportError:
-    GnaniSTTStreamClient = None # type: ignore
     GnaniTTSRealtimeClient = None # type: ignore
     AudioConfig = None # type: ignore
     GNANI_AVAILABLE = False
@@ -18,37 +19,43 @@ class VoiceManager:
         if not self.api_key:
             print("WARNING: GNANI_API_KEY not set. Voice integration will fail.")
             
-        # The frontend persona (Mahiru) usually maps to a female voice.
-        # "Pranav" is male, let's use "Sia" or "Neha" if supported, but we will default to "Sia"
-        # The docs state voice="Pranav" is an example. We can also pass "sia".
         self.tts_voice = "kaveri"
 
     async def transcribe_audio_stream(self, audio_chunk_generator: AsyncGenerator[bytes, None], language: str = "en-IN") -> str:
         """
-        Receives an async generator yielding PCM audio chunks (16kHz) from the frontend,
-        pipes them to Gnani STT, and returns the final transcript string.
+        Gathers all PCM audio chunks, builds an in-memory WAV file,
+        and sends it to Groq Whisper API for extremely fast transcription.
         """
-        if not GNANI_AVAILABLE or not self.api_key:
-            raise RuntimeError("Gnani SDK not available or API Key missing")
+        groq_api_key = os.environ.get("GROQ_API_KEY")
+        if not groq_api_key:
+            raise RuntimeError("GROQ_API_KEY not set. Cannot use STT.")
+
+        pcm_data = bytearray()
+        async for chunk in audio_chunk_generator:
+            pcm_data.extend(chunk)
+
+        if not pcm_data:
+            return ""
 
         try:
-            # We use stream_audio. Since realtime_pace=True is default, we can set it to False
-            # because the frontend is already streaming it in realtime.
-            async with GnaniSTTStreamClient(
-                api_key=self.api_key,
-                language_code=language,
-                sample_rate=16000
-            ) as client:
-                transcripts = await client.stream_audio(
-                    audio_source=audio_chunk_generator,
-                    realtime_pace=False
-                )
+            wav_io = io.BytesIO()
+            with wave.open(wav_io, 'wb') as wav_file:
+                wav_file.setnchannels(1)
+                wav_file.setsampwidth(2) # 16-bit PCM
+                wav_file.setframerate(16000)
+                wav_file.writeframes(pcm_data)
             
-            # stream_audio returns list[StreamTranscriptEvent]
-            # Each event has a .text property.
-            # Let's concatenate them.
-            final_text = " ".join([t.text for t in transcripts if hasattr(t, 'text')])
-            return final_text.strip()
+            wav_io.seek(0)
+            
+            whisper_lang = language.split('-')[0]
+            
+            client = AsyncGroq(api_key=groq_api_key)
+            transcription = await client.audio.transcriptions.create(
+                file=("audio.wav", wav_io.read()),
+                model="whisper-large-v3",
+                language=whisper_lang,
+            )
+            return transcription.text.strip()
             
         except Exception as e:
             print(f"STT Error: {e}")
@@ -74,8 +81,6 @@ class VoiceManager:
                 async for text_chunk in text_chunk_generator:
                     sentence_buffer += text_chunk
                     
-                    # If the start of the emotion tag appears, we can process everything before it 
-                    # and ignore the rest for TTS, since it's at the very end of the LLM response.
                     if "<emotion" in sentence_buffer.lower():
                         parts = re.split(r'<emotion', sentence_buffer, flags=re.IGNORECASE)
                         clean_text = parts[0]
@@ -83,19 +88,16 @@ class VoiceManager:
                             async for audio_chunk in client.synthesize(clean_text.strip(), voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
                                 yield audio_chunk
                         sentence_buffer = ""
-                        break # Stop TTS processing for the rest of the stream since it's just the tag
+                        break 
                     
-                    # Whenever we hit a logical sentence boundary, send it to TTS to minimize latency
-                    # We can use simple punctuation checks.
-                    if any(p in sentence_buffer for p in ['.', '?', '!', '\n']):
+                    # More granular chunks for faster TTS streaming
+                    if any(p in sentence_buffer for p in ['.', '?', '!', '\n', ',']):
                         if sentence_buffer.strip():
                             async for audio_chunk in client.synthesize(sentence_buffer.strip(), voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
                                 yield audio_chunk
                         sentence_buffer = ""
                 
-                # Synthesize any remaining text
                 if sentence_buffer.strip():
-                    # Just in case there is a malformed tag at the end
                     clean_text = re.sub(r'<emotion.*', '', sentence_buffer, flags=re.IGNORECASE)
                     if clean_text.strip():
                         async for audio_chunk in client.synthesize(clean_text.strip(), voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):

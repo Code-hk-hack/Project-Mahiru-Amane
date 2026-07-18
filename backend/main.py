@@ -91,79 +91,87 @@ async def websocket_voice_chat(
             if first_msg.get("type") == "websocket.disconnect":
                 break
                 
-            transcript = ""
-            is_audio = False
-            
-            if first_msg.get("text") is not None:
-                data = json.loads(first_msg["text"])
-                if data.get("type") == "text_input":
-                    transcript = data.get("text", "")
-            elif first_msg.get("bytes") is not None:
-                print("Received first audio byte frame, starting audio processing.")
-                is_audio = True
-
-            if is_audio:
-                # 1. Generator to read audio chunks from frontend until "stop" message
-                async def receive_audio():
-                    yield first_msg["bytes"]
-                    while True:
-                        message = await websocket.receive()
-                        if message.get("bytes") is not None:
-                            yield message["bytes"]
-                        elif message.get("text") is not None:
-                            data = json.loads(message["text"])
-                            if data.get("type") == "stop_speaking":
-                                break
-
-                # 2. Transcribe incoming audio
-                print("Starting transcription of audio stream...")
-                transcript = await voice_manager.transcribe_audio_stream(receive_audio(), language=language)
-                print(f"Transcription result: '{transcript}'")
-            
-            if not transcript:
-                print("No transcript (empty or silence). Sending turn_complete.")
-                # If no audio or empty transcript, unlock the frontend UI and wait for next cycle
-                await websocket.send_json({"type": "turn_complete"})
-                continue
+            try:
+                transcript = ""
+                is_audio = False
                 
-            print("Sending recognized text to UI...")
-            # Send the recognized text back to UI (only useful if it was voice, but harmless for text)
-            if is_audio:
-                await websocket.send_json({"type": "transcript", "text": transcript})
-            
-            # 3. Analyze text
-            feedback = AnalystAgent.analyze(transcript)
-            await websocket.send_json({"type": "feedback", "feedback": feedback.model_dump()})
-            
-            # 4. Stream LLM response & TTS
-            async def text_generator():
-                async for item in CoachAgent.stream_respond(transcript, feedback, difficulty, session_id, character, language):
-                    if item["type"] == "chunk":
-                        # Send text to frontend for UI update
-                        await websocket.send_json(item)
-                        # Yield text to TTS
-                        yield item["content"]
-                    elif item["type"] == "emotion":
-                        await websocket.send_json(item)
-                    elif item["type"] == "done":
-                        await websocket.send_json(item)
+                if first_msg.get("text") is not None:
+                    data = json.loads(first_msg["text"])
+                    if data.get("type") == "text_input":
+                        transcript = data.get("text", "")
+                    elif data.get("type") == "stop_speaking":
+                        await websocket.send_json({"type": "turn_complete"})
+                        continue
+                elif first_msg.get("bytes") is not None:
+                    print("Received first audio byte frame, starting audio processing.")
+                    is_audio = True
 
-            # Synthesize audio and send it over WebSocket as binary frames
-            async for audio_chunk in voice_manager.synthesize_text_stream(text_generator(), character=character):
-                await websocket.send_bytes(audio_chunk)
+                if is_audio:
+                    # 1. Generator to read audio chunks from frontend until "stop" message
+                    async def receive_audio():
+                        yield first_msg["bytes"]
+                        while True:
+                            message = await websocket.receive()
+                            if message.get("bytes") is not None:
+                                yield message["bytes"]
+                            elif message.get("text") is not None:
+                                data = json.loads(message["text"])
+                                if data.get("type") == "stop_speaking":
+                                    break
 
-            # Signal that the turn is complete
-            await websocket.send_json({"type": "turn_complete"})
+                    # 2. Transcribe incoming audio
+                    print("Starting transcription of audio stream...")
+                    transcript = await voice_manager.transcribe_audio_stream(receive_audio(), language=language)
+                    print(f"Transcription result: '{transcript}'")
+                
+                if not transcript:
+                    print("No transcript (empty or silence). Sending turn_complete.")
+                    # If no audio or empty transcript, unlock the frontend UI and wait for next cycle
+                    await websocket.send_json({"type": "turn_complete"})
+                    continue
+                    
+                print("Sending recognized text to UI...")
+                # Send the recognized text back to UI
+                if is_audio:
+                    await websocket.send_json({"type": "transcript", "text": transcript})
+                
+                # 3. Analyze text
+                feedback = AnalystAgent.analyze(transcript)
+                await websocket.send_json({"type": "feedback", "feedback": feedback.model_dump()})
+                
+                # 4. Stream LLM response & TTS
+                async def text_generator():
+                    async for item in CoachAgent.stream_respond(transcript, feedback, difficulty, session_id, character, language):
+                        if item["type"] == "chunk":
+                            await websocket.send_json(item)
+                            yield item["content"]
+                        elif item["type"] == "emotion":
+                            await websocket.send_json(item)
+                        elif item["type"] == "done":
+                            await websocket.send_json(item)
+
+                # Synthesize audio and send it over WebSocket as binary frames
+                async for audio_chunk in voice_manager.synthesize_text_stream(text_generator(), character=character):
+                    await websocket.send_bytes(audio_chunk)
+
+            except Exception as e:
+                print(f"Error during turn: {e}")
+                try:
+                    await websocket.send_json({"type": "error", "content": str(e)})
+                except Exception:
+                    pass
+            finally:
+                # Ensure turn_complete is always sent to unlock UI
+                try:
+                    await websocket.send_json({"type": "turn_complete"})
+                except Exception:
+                    pass
 
     except WebSocketDisconnect:
         print(f"WebSocket disconnected for session: {session_id}")
     except Exception as e:
         print(f"WebSocket error: {e}")
-        try:
-            await websocket.send_json({"type": "error", "content": str(e)})
-        except Exception:
-            pass
-
+        
 @app.get("/chat/history")
 def get_chat_history(session_id: str):
     try:
