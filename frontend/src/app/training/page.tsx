@@ -51,7 +51,7 @@ const TypewriterText = ({ text, onComplete }: { text: string, onComplete?: () =>
         clearInterval(interval);
         if (onCompleteRef.current) onCompleteRef.current();
       }
-    }, 20); 
+    }, 45); 
     
     return () => clearInterval(interval);
   }, [text]);
@@ -230,11 +230,18 @@ export default function TrainingPage() {
         
         const source = ctx.createBufferSource();
         source.buffer = audioBuffer;
+        
+        // Slow down speech slightly for a more relaxed and understandable coach voice
+        const playbackSpeed = 0.90;
+        source.playbackRate.value = playbackSpeed;
+        
         source.connect(ctx.destination);
         
         const startTime = Math.max(ctx.currentTime, nextStartTimeRef.current);
         source.start(startTime);
-        nextStartTimeRef.current = startTime + audioBuffer.duration;
+        
+        // Adjust the next start time accounting for the slowed playback rate
+        nextStartTimeRef.current = startTime + (audioBuffer.duration / playbackSpeed);
       } else {
         // Text message
         try {
