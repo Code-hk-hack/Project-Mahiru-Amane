@@ -76,17 +76,31 @@ class VoiceManager:
         try:
             async with GnaniTTSRealtimeClient(api_key=self.api_key) as client:
                 audio_cfg = AudioConfig(sample_rate=16000, encoding='linear_pcm', container='raw')
-                full_text = ""
+                sentence_buffer = ""
                 
                 async for text_chunk in text_chunk_generator:
-                    full_text += text_chunk
+                    sentence_buffer += text_chunk
+                    
+                    if any(p in sentence_buffer for p in ['.', '?', '!', '\n']):
+                        clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>", "", sentence_buffer, flags=re.IGNORECASE).strip()
+                        if clean_text:
+                            # Accumulate audio for the entire sentence to prevent popping from tiny websocket buffers
+                            sentence_audio = bytearray()
+                            async for audio_chunk in client.synthesize(clean_text, voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
+                                sentence_audio.extend(audio_chunk)
+                            if sentence_audio:
+                                yield bytes(sentence_audio)
+                        sentence_buffer = ""
                 
-                # We do a final strip of emotion tags in case any leaked through the generator
-                clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>|<\s*[a-z_]+\s*>", "", full_text, flags=re.IGNORECASE).strip()
-                
-                if clean_text:
-                    async for audio_chunk in client.synthesize(clean_text, voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
-                        yield audio_chunk
+                # Final flush
+                if sentence_buffer.strip():
+                    clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>", "", sentence_buffer, flags=re.IGNORECASE).strip()
+                    if clean_text:
+                        sentence_audio = bytearray()
+                        async for audio_chunk in client.synthesize(clean_text, voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
+                            sentence_audio.extend(audio_chunk)
+                        if sentence_audio:
+                            yield bytes(sentence_audio)
                         
         except Exception as e:
             print(f"TTS Error: {e}")
