@@ -34,6 +34,7 @@ interface Message {
 
 const TypewriterText = ({ text, onComplete }: { text: string, onComplete?: () => void }) => {
   const [displayedText, setDisplayedText] = useState("");
+  const iRef = useRef(0);
   const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
@@ -41,13 +42,20 @@ const TypewriterText = ({ text, onComplete }: { text: string, onComplete?: () =>
   }, [onComplete]);
 
   useEffect(() => {
-    setDisplayedText("");
     const safeText = text || "";
-    let i = 0;
+    
+    if (iRef.current >= safeText.length) {
+      if (safeText.length > 0 && onCompleteRef.current) {
+        onCompleteRef.current();
+      }
+      return;
+    }
+    
     const interval = setInterval(() => {
-      setDisplayedText(safeText.substring(0, i + 1));
-      i++;
-      if (i >= safeText.length) {
+      setDisplayedText(safeText.substring(0, iRef.current + 1));
+      iRef.current++;
+      
+      if (iRef.current >= safeText.length) {
         clearInterval(interval);
         if (onCompleteRef.current) onCompleteRef.current();
       }
@@ -548,6 +556,7 @@ export default function TrainingPage() {
             <div className="p-8 pt-10 min-h-[140px] text-[1.1rem] leading-relaxed font-medium text-[var(--text-primary)]">
               {currentDialogue.role === "coach" && currentDialogue.content !== "..." ? (
                 <TypewriterText 
+                  key={messages.length}
                   text={currentDialogue.content.replace(/<\s*emotion\s*>.*?<\s*\/\s*emotion\s*>/gi, '').replace(/<\s*(?!emotion\b)[a-z_]+\s*>/gi, '').trim()} 
                   onComplete={() => setIsTyping(false)} 
                 />

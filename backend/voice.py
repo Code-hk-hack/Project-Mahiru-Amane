@@ -61,7 +61,7 @@ class VoiceManager:
             print(f"STT Error: {e}")
             return ""
 
-    async def synthesize_text_stream(self, text_chunk_generator: AsyncGenerator[str, None], character: str = "mahiru") -> AsyncGenerator[bytes, None]:
+    async def synthesize_text_stream(self, text_chunk_generator: AsyncGenerator[str, None], character: str = "mahiru", language: str = "en-IN") -> AsyncGenerator[bytes, None]:
         """
         Takes an async generator yielding text chunks (from Groq LLM),
         pipes them into Gnani TTS, and yields PCM audio chunks (16kHz) to be sent to the frontend.
@@ -86,7 +86,8 @@ class VoiceManager:
                         if clean_text:
                             # Accumulate audio for the entire sentence to prevent popping from tiny websocket buffers
                             sentence_audio = bytearray()
-                            async for audio_chunk in client.synthesize(clean_text, voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
+                            gnani_lang = language.split('-')[0]
+                            async for audio_chunk in client.synthesize(clean_text, voice=tts_voice, model="timbre-v2.5", language=gnani_lang, audio_config=audio_cfg):
                                 sentence_audio.extend(audio_chunk)
                             if sentence_audio:
                                 yield bytes(sentence_audio)
@@ -97,7 +98,8 @@ class VoiceManager:
                     clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>|<\s*(?!emotion\b)[a-z_]+\s*>", "", sentence_buffer, flags=re.IGNORECASE).strip()
                     if clean_text:
                         sentence_audio = bytearray()
-                        async for audio_chunk in client.synthesize(clean_text, voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
+                        gnani_lang = language.split('-')[0]
+                        async for audio_chunk in client.synthesize(clean_text, voice=tts_voice, model="timbre-v2.5", language=gnani_lang, audio_config=audio_cfg):
                             sentence_audio.extend(audio_chunk)
                         if sentence_audio:
                             yield bytes(sentence_audio)

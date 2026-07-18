@@ -150,9 +150,14 @@ async def websocket_voice_chat(
                         elif item["type"] == "done":
                             await websocket.send_json(item)
 
-                # Synthesize audio and send it over WebSocket as binary frames
-                async for audio_chunk in voice_manager.synthesize_text_stream(text_generator(), character=character):
-                    await websocket.send_bytes(audio_chunk)
+                if is_audio:
+                    # Synthesize audio and send it over WebSocket as binary frames
+                    async for audio_chunk in voice_manager.synthesize_text_stream(text_generator(), character=character, language=language):
+                        await websocket.send_bytes(audio_chunk)
+                else:
+                    # Consume the generator to trigger LLM SSE streaming for text chat
+                    async for _ in text_generator():
+                        pass
 
             except Exception as e:
                 print(f"Error during turn: {e}")
