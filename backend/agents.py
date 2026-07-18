@@ -303,14 +303,15 @@ Valid emotions: {emotions_list}
                     full_response_text += chunk.content
                     
                     if not emotion_extracted:
-                        emotion_match = re.search(r"<\s*emotion\s*>([a-z_\s]+)<\s*/\s*emotion\s*>", full_response_text, re.IGNORECASE)
+                        # Match <emotion>angry</emotion> OR <angry>, but NOT <emotion>
+                        emotion_match = re.search(r"<\s*emotion\s*>([a-z_\s]+)<\s*/\s*emotion\s*>|<\s*(?!emotion\b)([a-z_]+)\s*>", full_response_text, re.IGNORECASE)
                         if emotion_match:
-                            emotion = emotion_match.group(1).strip().lower()
+                            emotion = (emotion_match.group(1) or emotion_match.group(2)).strip().lower()
                             emotion_extracted = True
                             yield {"type": "emotion", "emotion": emotion}
                             
                             # Clean the full response up to this point and yield
-                            clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>", "", full_response_text, flags=re.IGNORECASE).lstrip()
+                            clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>|<\s*(?!emotion\b)[a-z_]+\s*>", "", full_response_text, flags=re.IGNORECASE).lstrip()
                             if clean_text:
                                 yield {"type": "chunk", "content": clean_text}
                         else:

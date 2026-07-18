@@ -82,7 +82,7 @@ class VoiceManager:
                     sentence_buffer += text_chunk
                     
                     if any(p in sentence_buffer for p in ['.', '?', '!', '\n']):
-                        clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>", "", sentence_buffer, flags=re.IGNORECASE).strip()
+                        clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>|<\s*(?!emotion\b)[a-z_]+\s*>", "", sentence_buffer, flags=re.IGNORECASE).strip()
                         if clean_text:
                             # Accumulate audio for the entire sentence to prevent popping from tiny websocket buffers
                             sentence_audio = bytearray()
@@ -94,7 +94,7 @@ class VoiceManager:
                 
                 # Final flush
                 if sentence_buffer.strip():
-                    clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>", "", sentence_buffer, flags=re.IGNORECASE).strip()
+                    clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>|<\s*(?!emotion\b)[a-z_]+\s*>", "", sentence_buffer, flags=re.IGNORECASE).strip()
                     if clean_text:
                         sentence_audio = bytearray()
                         async for audio_chunk in client.synthesize(clean_text, voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):

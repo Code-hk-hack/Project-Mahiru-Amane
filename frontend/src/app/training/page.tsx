@@ -548,7 +548,7 @@ export default function TrainingPage() {
             <div className="p-8 pt-10 min-h-[140px] text-[1.1rem] leading-relaxed font-medium text-[var(--text-primary)]">
               {currentDialogue.role === "coach" && currentDialogue.content !== "..." ? (
                 <TypewriterText 
-                  text={currentDialogue.content.replace(/<emotion>.*?<\/emotion>/gi, '').replace(/<emotion>.*/gi, '').trim()} 
+                  text={currentDialogue.content.replace(/<\s*emotion\s*>.*?<\s*\/\s*emotion\s*>/gi, '').replace(/<\s*(?!emotion\b)[a-z_]+\s*>/gi, '').trim()} 
                   onComplete={() => setIsTyping(false)} 
                 />
               ) : (
