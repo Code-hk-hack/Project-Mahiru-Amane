@@ -361,10 +361,8 @@ export default function TrainingPage() {
       setIsLoading(true); // Prevent text sending while recording
       transcriptRef.current = "";
       
-      const ws = connectWebSocket();
-      if (ws.readyState !== WebSocket.OPEN) {
-        await new Promise(resolve => ws.addEventListener('open', resolve, { once: true }));
-      }
+      // Connect WS but don't await it to preserve the user gesture for SpeechRecognition
+      connectWebSocket();
       
       const recognition = new SpeechRecognition();
       recognition.lang = activeLanguage;
@@ -408,7 +406,8 @@ export default function TrainingPage() {
       recognitionRef.current = null;
     }
     
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+    const sendPayload = () => {
+      if (!wsRef.current) return;
       const finalTranscript = transcriptRef.current.trim();
       if (finalTranscript) {
         // We have text, send it with wants_audio flag to trigger backend TTS
@@ -421,6 +420,18 @@ export default function TrainingPage() {
         // Nothing was said
         wsRef.current.send(JSON.stringify({ type: "stop_speaking" }));
       }
+    };
+
+    if (wsRef.current) {
+      if (wsRef.current.readyState === WebSocket.OPEN) {
+        sendPayload();
+      } else if (wsRef.current.readyState === WebSocket.CONNECTING) {
+        wsRef.current.addEventListener('open', sendPayload, { once: true });
+      } else {
+        setIsLoading(false); // WS failed
+      }
+    } else {
+      setIsLoading(false);
     }
   };
 
@@ -648,14 +659,17 @@ export default function TrainingPage() {
                   disabled={isLoading || isTyping || isRecording}
                 />
                 
-                <button 
-                  suppressHydrationWarning
-                  className={`p-3 rounded-full transition-all duration-300 shadow-sm ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' : isLoading || isTyping ? 'bg-[var(--surface-low)] text-[var(--text-secondary)] opacity-50' : 'bg-gradient-to-r from-[#D4AF37] to-[#B5952F] text-white hover:shadow-[0_4px_15px_rgba(212,175,55,0.4)] hover:-translate-y-0.5'}`}
+                <button
+                  className={`w-12 h-12 rounded-full transition-all duration-200 shadow-md flex items-center justify-center border-0 ${
+                    isRecording 
+                      ? 'bg-red-500 hover:bg-red-600 scale-110 animate-pulse' 
+                      : 'bg-white hover:bg-gray-100 text-gray-700'
+                  }`}
                   onMouseDown={handleStartRecording}
                   onMouseUp={handleStopRecording}
                   onMouseLeave={handleStopRecording}
-                  disabled={isLoading && !isRecording}
-                  title="Hold to Speak"
+                  disabled={(isLoading || isTyping) && !isRecording}
+                  title="Hold to speak"
                 >
                   <Mic className="w-5 h-5" />
                 </button>

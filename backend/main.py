@@ -93,22 +93,24 @@ async def websocket_voice_chat(
                 
             try:
                 transcript = ""
-                is_audio = False
+                is_audio_input = False
+                wants_audio_output = False
                 
                 if first_msg.get("text") is not None:
                     data = json.loads(first_msg["text"])
                     if data.get("type") == "text_input":
                         transcript = data.get("text", "")
                         if data.get("wants_audio"):
-                            is_audio = True
+                            wants_audio_output = True
                     elif data.get("type") == "stop_speaking":
                         await websocket.send_json({"type": "turn_complete"})
                         continue
                 elif first_msg.get("bytes") is not None:
                     print("Received first audio byte frame, starting audio processing.")
-                    is_audio = True
+                    is_audio_input = True
+                    wants_audio_output = True
 
-                if is_audio:
+                if is_audio_input:
                     # 1. Generator to read audio chunks from frontend until "stop" message
                     async def receive_audio():
                         yield first_msg["bytes"]
@@ -134,7 +136,7 @@ async def websocket_voice_chat(
                     
                 print("Sending recognized text to UI...")
                 # Send the recognized text back to UI
-                if is_audio:
+                if is_audio_input:
                     await websocket.send_json({"type": "transcript", "text": transcript})
                 
                 # 3. Analyze text
@@ -152,7 +154,7 @@ async def websocket_voice_chat(
                         elif item["type"] == "done":
                             await websocket.send_json(item)
 
-                if is_audio:
+                if wants_audio_output:
                     # Synthesize audio and send it over WebSocket as binary frames
                     async for audio_chunk in voice_manager.synthesize_text_stream(text_generator(), character=character, language=language):
                         await websocket.send_bytes(audio_chunk)
