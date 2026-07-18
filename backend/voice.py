@@ -91,7 +91,7 @@ class VoiceManager:
                         break 
                     
                     # More granular chunks for faster TTS streaming
-                    if any(p in sentence_buffer for p in ['.', '?', '!', '\n', ',']):
+                    if any(p in sentence_buffer for p in ['.', '?', '!', '\n']):
                         if sentence_buffer.strip():
                             async for audio_chunk in client.synthesize(sentence_buffer.strip(), voice=tts_voice, model="timbre-v2.5", audio_config=audio_cfg):
                                 yield audio_chunk

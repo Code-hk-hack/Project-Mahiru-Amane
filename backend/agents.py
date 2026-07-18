@@ -303,18 +303,23 @@ Valid emotions: {emotions_list}
                     full_response_text += chunk.content
                     
                     if not emotion_extracted:
-                        emotion_match = re.search(r"<emotion>([a-z_]+)</emotion>|<([a-z_]+)>", full_response_text, re.IGNORECASE)
+                        # Looser regex to catch emotion tags even with spaces
+                        emotion_match = re.search(r"<\s*emotion\s*>([a-z_\s]+)<\s*/\s*emotion\s*>|<\s*([a-z_]+)\s*>", full_response_text, re.IGNORECASE)
                         if emotion_match:
                             emotion = (emotion_match.group(1) or emotion_match.group(2)).strip().lower()
                             emotion_extracted = True
                             yield {"type": "emotion", "emotion": emotion}
                             
-                            match_end = emotion_match.end()
-                            text_to_yield = full_response_text[match_end:]
-                            if text_to_yield:
-                                yield {"type": "chunk", "content": text_to_yield}
+                            # Clean the full response up to this point and yield
+                            clean_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>|<\s*[a-z_]+\s*>", "", full_response_text, flags=re.IGNORECASE).lstrip()
+                            if clean_text:
+                                yield {"type": "chunk", "content": clean_text}
                         else:
-                            if not full_response_text.strip().startswith("<"):
+                            # Buffer until we are sure there's no tag or it's taking too long
+                            if "<" not in full_response_text and len(full_response_text) > 15:
+                                emotion_extracted = True
+                                yield {"type": "chunk", "content": full_response_text}
+                            elif len(full_response_text) > 60:
                                 emotion_extracted = True
                                 yield {"type": "chunk", "content": full_response_text}
                     else:
@@ -367,11 +372,11 @@ Valid emotions: {emotions_list}
             break
 
         # Extract emotion from tags
-        emotion_match = re.search(r"<emotion>([a-z_]+)</emotion>|<([a-z_]+)>", full_response_text, re.IGNORECASE)
+        emotion_match = re.search(r"<\s*emotion\s*>([a-z_\s]+)<\s*/\s*emotion\s*>|<\s*([a-z_]+)\s*>", full_response_text, re.IGNORECASE)
         if emotion_match:
             emotion = (emotion_match.group(1) or emotion_match.group(2)).strip().lower()
             # Remove the tag from the final spoken text
-            full_response_text = re.sub(r"<emotion>[a-z_]+</emotion>|<[a-z_]+>", "", full_response_text, flags=re.IGNORECASE).strip()
+            full_response_text = re.sub(r"<\s*emotion\s*>[a-z_\s]+<\s*/\s*emotion\s*>|<\s*[a-z_]+\s*>", "", full_response_text, flags=re.IGNORECASE).strip()
 
         # Save to database
         if session_id and session_id != "default-session":
