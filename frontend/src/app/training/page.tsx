@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft, Send, Activity, MessageSquareWarning, PauseCircle, Mic } from "lucide-react";
+import { ArrowLeft, Send, Activity, MessageSquareWarning, PauseCircle, Mic, RotateCcw } from "lucide-react";
 
 const SUPPORTED_LANGUAGES = [
   { code: "en-IN", name: "English" },
@@ -422,6 +422,19 @@ export default function TrainingPage() {
     }
   };
 
+  const handleNewSession = () => {
+    const newSessionId = crypto.randomUUID();
+    const key = `${activeCharacter}_session_id`;
+    localStorage.setItem(key, newSessionId);
+    setSessionId(newSessionId);
+    setMessages([]);
+    setCurrentEmotion("waiting");
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+  };
+
   const latestFeedback = messages.filter(m => m.feedback).pop()?.feedback;
   const currentDialogue = messages.length > 0 && messages[messages.length - 1].role === "coach" 
     ? messages[messages.length - 1] 
@@ -444,6 +457,14 @@ export default function TrainingPage() {
           </Link>
           <div className="h-5 w-px bg-[var(--primary-color)]/20" />
           <h1 className="font-[family-name:var(--font-playfair)] font-bold text-xl tracking-wide text-[var(--text-primary)]">Active Evaluation</h1>
+          <div className="h-5 w-px bg-[var(--primary-color)]/20 ml-4" />
+          <button 
+            onClick={handleNewSession}
+            className="flex items-center gap-2 text-sm font-semibold px-4 py-1.5 rounded-full bg-white border border-[var(--primary-color)]/20 text-[var(--text-secondary)] hover:text-[var(--primary-color)] hover:border-[var(--primary-color)] hover:shadow-md transition-all ml-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            New Session
+          </button>
         </div>
         
         <div className="flex items-center gap-4">
