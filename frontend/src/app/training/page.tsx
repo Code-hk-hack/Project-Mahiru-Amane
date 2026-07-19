@@ -125,7 +125,7 @@ export default function TrainingPage() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
   const recordingAudioCtxRef = useRef<AudioContext | null>(null);
-  const isMicPressedRef = useRef(false);
+  const isStartingMicRef = useRef(false);
   const isRecordingRef = useRef(false);
   
   // Clean up on unmount
@@ -352,11 +352,12 @@ export default function TrainingPage() {
   };
 
   const handleStartRecording = async () => {
-    if (isLoading || isTyping) return;
+    if (isLoading || isTyping || isStartingMicRef.current) return;
+    isStartingMicRef.current = true;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      if (!isMicPressedRef.current) {
+      if (!isStartingMicRef.current) {
         stream.getTracks().forEach(t => t.stop());
         return;
       }
@@ -422,6 +423,7 @@ export default function TrainingPage() {
   };
 
   const handleStopRecording = () => {
+    isStartingMicRef.current = false;
     setIsRecording(false);
     isRecordingRef.current = false;
     
@@ -440,6 +442,14 @@ export default function TrainingPage() {
     
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: "stop_speaking" }));
+    }
+  };
+
+  const toggleRecording = () => {
+    if (isRecording || isStartingMicRef.current) {
+      handleStopRecording();
+    } else {
+      handleStartRecording();
     }
   };
 
@@ -623,20 +633,9 @@ export default function TrainingPage() {
                 <button 
                   suppressHydrationWarning
                   className={`p-3 rounded-full transition-all duration-300 shadow-sm ${isRecording ? 'bg-red-500 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' : isLoading || isTyping ? 'bg-[var(--surface-low)] text-[var(--text-secondary)] opacity-50' : 'bg-gradient-to-r from-[#D4AF37] to-[#B5952F] text-white hover:shadow-[0_4px_15px_rgba(212,175,55,0.4)] hover:-translate-y-0.5'}`}
-                  onMouseDown={() => {
-                    isMicPressedRef.current = true;
-                    handleStartRecording();
-                  }}
-                  onMouseUp={() => {
-                    isMicPressedRef.current = false;
-                    handleStopRecording();
-                  }}
-                  onMouseLeave={() => {
-                    isMicPressedRef.current = false;
-                    handleStopRecording();
-                  }}
+                  onClick={toggleRecording}
                   disabled={isLoading && !isRecording}
-                  title="Hold to Speak"
+                  title="Click to Speak / Click to Stop"
                 >
                   <Mic className="w-5 h-5" />
                 </button>
