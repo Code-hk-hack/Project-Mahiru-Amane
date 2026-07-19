@@ -13,7 +13,7 @@ const quicksand = Quicksand({
 });
 
 export const metadata: Metadata = {
-  title: "Project Mahiru - Active Evaluation",
+  title: "Aura AI - Active Evaluation",
   description: "Eliminate hesitation with angelic precision.",
 };
 

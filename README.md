@@ -1,6 +1,6 @@
-# Project Mahiru/Amane 🌸
+# Aura AI 🌸
 
-**Project Mahiru/Amane** is an AI-driven soft-skills and social confidence coaching simulator, presented through a highly interactive Anime Visual Novel aesthetic. It serves as a zero-latency digital training ground to help users build conversational "muscle memory" without the psychological traps of traditional AI companions.
+**Aura AI** is an AI-driven soft-skills and social confidence coaching simulator, presented through a highly interactive Anime Visual Novel aesthetic. It serves as a zero-latency digital training ground to help users build conversational "muscle memory" without the psychological traps of traditional AI companions.
 
 ## Core Philosophy: The "No-Escapism" Mandate 🚫
 Unlike standard AI chatbots, this platform enforces a strict "No-Escapism" mandate. 

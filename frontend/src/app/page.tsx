@@ -57,8 +57,8 @@ export default function LandingPage() {
         className="flex justify-between items-center w-full max-w-6xl px-8 py-8 z-10"
       >
         <div className="flex items-center gap-3">
-          <Star className="w-5 h-5 text-[var(--primary-color)] fill-[var(--primary-color)]" />
-          <div className="font-[family-name:var(--font-playfair)] font-bold text-xl tracking-wide">Project Mahiru</div>
+          <img src="/logo.png" alt="Aura AI Logo" className="w-8 h-8 rounded-md" />
+          <div className="font-[family-name:var(--font-playfair)] font-bold text-xl tracking-wide">Aura AI</div>
         </div>
         <div className="flex gap-8 text-[var(--text-secondary)] font-medium">
           <Link href="/dashboard" className="hover:text-[var(--primary-color)] transition-colors">Analytics</Link>
@@ -80,7 +80,7 @@ export default function LandingPage() {
         </h1>
         
         <p className="text-lg md:text-xl text-[var(--text-secondary)] leading-relaxed mb-12 max-w-2xl">
-          Let Mahiru guide your words. Using strict evaluation rubrics wrapped in a warm, elegant interface, she will gently correct hesitation and passive language.
+          Let Aura guide your words. Using strict evaluation rubrics wrapped in a warm, elegant interface, she will gently correct hesitation and passive language.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center">
