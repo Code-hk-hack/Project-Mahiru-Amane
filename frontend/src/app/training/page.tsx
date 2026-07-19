@@ -185,11 +185,17 @@ export default function TrainingPage() {
     setCurrentEmotion(activeCharacter === "mahiru" ? "waiting" : "happy");
   }, [activeCharacter]);
   
+  const validMahiruEmotions = ["angry", "concerned", "happy", "little_happy", "sleepy", "thinking", "very_happy", "waiting", "waiting_2"];
+  const validAmaneEmotions = ["happy", "impressed", "impressed_starlted", "sad", "sad_notimpressed", "shy", "sleepy", "small_smile", "starlted", "startled_happy_joy"];
+
   const getSpriteFilename = (character: "mahiru" | "amane", emotion: string) => {
-    if (emotion === "neutral") {
-      emotion = character === "mahiru" ? "waiting" : "happy";
+    let safeEmotion = emotion;
+    if (character === "mahiru") {
+      if (!validMahiruEmotions.includes(safeEmotion)) safeEmotion = "waiting";
+    } else {
+      if (!validAmaneEmotions.includes(safeEmotion)) safeEmotion = "happy";
     }
-    return `${character}_${emotion}.png`;
+    return `${character}_${safeEmotion}.png`;
   };
 
   useEffect(() => {
@@ -599,10 +605,8 @@ export default function TrainingPage() {
                   const fallback = activeCharacter === "mahiru" ? "mahiru_waiting.png" : "amane_happy.png";
                   if (!e.currentTarget.src.includes(fallback)) {
                     e.currentTarget.src = `/${fallback}`;
-                  } else {
-                    e.currentTarget.style.display = 'none';
                   }
-                }} 
+                }}  
               />
             </AnimatePresence>
           </div>
