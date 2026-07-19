@@ -580,10 +580,10 @@ export default function TrainingPage() {
                 animate={{ 
                   opacity: 1, 
                   y: [0, -15, 0],
-                  scale: isTyping ? [1, 1.02, 1] : 1,
+                  scale: isTyping ? [1, 1.02, 1] : [1, 1, 1],
                   filter: isTyping 
                     ? ["drop-shadow(0px 0px 0px rgba(212,175,55,0))", "drop-shadow(0px 0px 30px rgba(212,175,55,0.8))", "drop-shadow(0px 0px 0px rgba(212,175,55,0))"]
-                    : "drop-shadow(0px 0px 0px rgba(212,175,55,0))"
+                    : ["drop-shadow(0px 0px 0px rgba(212,175,55,0))", "drop-shadow(0px 0px 0px rgba(212,175,55,0))", "drop-shadow(0px 0px 0px rgba(212,175,55,0))"]
                 }}
                 exit={{ opacity: 0, y: -10, scale: 0.95 }}
                 transition={{ 
