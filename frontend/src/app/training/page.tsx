@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, Send, Activity, MessageSquareWarning, PauseCircle, Mic, RotateCcw } from "lucide-react";
+import Image from "next/image";
 
 const SUPPORTED_LANGUAGES = [
   { code: "en-IN", name: "English" },
@@ -585,8 +586,8 @@ export default function TrainingPage() {
         <div className="flex-1 flex flex-col items-center justify-end pb-12 px-4 relative z-10">
           
           {/* Character Display */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none opacity-90 drop-shadow-2xl">
-              <motion.img 
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none opacity-90 drop-shadow-2xl w-full h-[75vh] flex justify-center items-center">
+              <motion.div 
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ 
                   opacity: 1, 
@@ -602,16 +603,16 @@ export default function TrainingPage() {
                   scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
                   filter: { duration: 2, repeat: Infinity, ease: "easeInOut" }
                 }}
-                src={`/${getSpriteFilename(activeCharacter, currentEmotion)}`} 
-                alt="Character" 
-                className="max-h-[75vh] object-contain transition-all duration-500"
-                onError={(e) => {
-                  const fallback = activeCharacter === "mahiru" ? "mahiru_waiting.png" : "amane_happy.png";
-                  if (!e.currentTarget.src.includes(fallback)) {
-                    e.currentTarget.src = `/${fallback}`;
-                  }
-                }}  
-              />
+                className="relative w-full h-full max-w-[800px] transition-all duration-500"
+              >
+                <Image
+                  src={`/${getSpriteFilename(activeCharacter, currentEmotion)}`} 
+                  alt="Character"
+                  fill 
+                  className="object-contain"
+                  priority
+                />
+              </motion.div>
           </div>
 
           {/* Dialogue Box */}
