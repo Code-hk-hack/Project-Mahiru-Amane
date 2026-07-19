@@ -588,8 +588,8 @@ export default function TrainingPage() {
         {/* Main Interface */}
         <div className="flex-1 flex flex-col items-center justify-end pb-6 sm:pb-12 px-3 sm:px-4 relative z-10">
           
-          {/* Character Display — natural aspect ratio, centered */}
-          <div className="absolute top-0 left-0 right-0 bottom-0 z-0 pointer-events-none flex justify-center items-end overflow-hidden">
+          {/* Character Display — natural aspect ratio, centered vertically */}
+          <div className="absolute top-0 left-0 right-0 bottom-0 z-0 pointer-events-none flex justify-center items-center pb-[180px] sm:pb-[200px]">
               <motion.div 
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ 
@@ -612,9 +612,9 @@ export default function TrainingPage() {
                   src={`/${getSpriteFilename(activeCharacter, currentEmotion)}`} 
                   alt="Character"
                   width={420}
-                  height={680}
-                  sizes="(max-width: 640px) 280px, 420px"
-                  className="object-contain w-[220px] sm:w-[320px] lg:w-[420px] h-auto"
+                  height={614}
+                  sizes="(max-width: 640px) 240px, (max-width: 1024px) 340px, 420px"
+                  className="object-contain w-[200px] sm:w-[300px] lg:w-[380px] xl:w-[420px] h-auto"
                   priority
                 />
               </motion.div>
