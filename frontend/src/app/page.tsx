@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight, Feather, Heart, Sparkles, Star } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -61,18 +61,13 @@ export default function LandingPage() {
         <motion.div 
           className="flex items-center gap-3 cursor-pointer"
           onClick={() => setIsLogoAnimating(true)}
-          animate={isLogoAnimating ? { scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] } : {}}
-          transition={{ duration: 0.6, ease: "easeInOut" }}
-          onAnimationComplete={() => setIsLogoAnimating(false)}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <motion.img 
+          <img 
             src="/logo.png" 
             alt="Aura AI Logo" 
-            className="w-8 h-8 rounded-md" 
-            animate={isLogoAnimating ? { filter: ["drop-shadow(0px 0px 0px rgba(212,175,55,0))", "drop-shadow(0px 0px 20px rgba(212,175,55,0.8))", "drop-shadow(0px 0px 0px rgba(212,175,55,0))"] } : {}}
-            transition={{ duration: 0.6 }}
+            className="w-8 h-8 rounded-md shadow-md" 
           />
           <div className="font-[family-name:var(--font-playfair)] font-bold text-xl tracking-wide">Aura AI</div>
         </motion.div>
@@ -150,6 +145,34 @@ export default function LandingPage() {
           </motion.div>
         ))}
       </div>
+
+      <AnimatePresence>
+        {isLogoAnimating && (
+          <motion.div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--surface-lowest)]/80 backdrop-blur-md cursor-pointer"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            onClick={() => setIsLogoAnimating(false)}
+          >
+            <motion.img 
+              src="/logo.png" 
+              alt="Aura AI Logo"
+              className="w-[80vmin] h-[80vmin] max-w-[600px] max-h-[600px] rounded-[3rem]"
+              initial={{ scale: 0.5, opacity: 0, filter: "brightness(0.5)" }}
+              animate={{ 
+                scale: [0.5, 1.1, 1], 
+                opacity: 1, 
+                filter: ["brightness(0.5)", "brightness(1.5)", "brightness(1)"],
+                boxShadow: ["0px 0px 0px rgba(212,175,55,0)", "0px 0px 150px rgba(212,175,55,1)", "0px 0px 80px rgba(212,175,55,0.6)"]
+              }}
+              exit={{ scale: 1.5, opacity: 0, filter: "blur(20px)" }}
+              transition={{ duration: 1.2, type: "spring", bounce: 0.5 }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
