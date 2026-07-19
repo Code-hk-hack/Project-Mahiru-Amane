@@ -41,6 +41,8 @@ const FloatingDust = () => {
 };
 
 export default function LandingPage() {
+  const [isLogoAnimating, setIsLogoAnimating] = useState(false);
+
   return (
     <div className="min-h-screen flex flex-col items-center relative bg-[var(--surface-lowest)] text-[var(--text-primary)] overflow-hidden selection:bg-[var(--primary-color)] selection:text-white">
       
@@ -56,10 +58,24 @@ export default function LandingPage() {
         transition={{ duration: 1, ease: "easeOut" }}
         className="flex justify-between items-center w-full max-w-6xl px-8 py-8 z-10"
       >
-        <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Aura AI Logo" className="w-8 h-8 rounded-md" />
+        <motion.div 
+          className="flex items-center gap-3 cursor-pointer"
+          onClick={() => setIsLogoAnimating(true)}
+          animate={isLogoAnimating ? { scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] } : {}}
+          transition={{ duration: 0.6, ease: "easeInOut" }}
+          onAnimationComplete={() => setIsLogoAnimating(false)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <motion.img 
+            src="/logo.png" 
+            alt="Aura AI Logo" 
+            className="w-8 h-8 rounded-md" 
+            animate={isLogoAnimating ? { filter: ["drop-shadow(0px 0px 0px rgba(212,175,55,0))", "drop-shadow(0px 0px 20px rgba(212,175,55,0.8))", "drop-shadow(0px 0px 0px rgba(212,175,55,0))"] } : {}}
+            transition={{ duration: 0.6 }}
+          />
           <div className="font-[family-name:var(--font-playfair)] font-bold text-xl tracking-wide">Aura AI</div>
-        </div>
+        </motion.div>
         <div className="flex gap-8 text-[var(--text-secondary)] font-medium">
           <Link href="/dashboard" className="hover:text-[var(--primary-color)] transition-colors">Analytics</Link>
           <Link href="/training" className="hover:text-[var(--primary-color)] transition-colors">Start Session</Link>
