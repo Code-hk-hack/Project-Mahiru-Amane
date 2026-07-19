@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft, Send, Activity, MessageSquareWarning, PauseCircle, Mic, RotateCcw } from "lucide-react";
+import { ArrowLeft, Send, Activity, MessageSquareWarning, PauseCircle, Mic, RotateCcw, ChevronUp, X } from "lucide-react";
 import Image from "next/image";
 
 const SUPPORTED_LANGUAGES = [
@@ -110,6 +110,7 @@ export default function TrainingPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [sessionId, setSessionId] = useState("");
+  const [showAnalyst, setShowAnalyst] = useState(false); // mobile bottom sheet
   
   const [activeCharacter, setActiveCharacter] = useState<"mahiru" | "amane">("mahiru");
   const [activeLanguage, setActiveLanguage] = useState("en-IN");
@@ -528,32 +529,34 @@ export default function TrainingPage() {
       {/* Top Border */}
       <div className="w-full h-[3px] bg-gradient-to-r from-transparent via-[var(--primary-color)] to-transparent opacity-40 z-20 relative" />
 
-      {/* Navigation */}
-      <nav className="flex items-center justify-between px-8 py-6 border-b border-[var(--primary-color)]/10 bg-white/60 backdrop-blur-md z-20 relative shadow-sm">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="text-[var(--text-secondary)] hover:text-[var(--primary-color)] transition-colors flex items-center gap-2 text-sm font-semibold">
+      {/* Navigation — 2-row on mobile, single row on desktop */}
+      <nav className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-8 py-3 sm:py-6 border-b border-[var(--primary-color)]/10 bg-white/60 backdrop-blur-md z-20 relative shadow-sm gap-3">
+        {/* Row 1: back, title, new session */}
+        <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+          <Link href="/" className="text-[var(--text-secondary)] hover:text-[var(--primary-color)] transition-colors flex items-center gap-1 text-sm font-semibold shrink-0">
             <ArrowLeft className="w-4 h-4" />
-            Return Home
+            <span className="hidden sm:inline">Return Home</span>
           </Link>
-          <div className="h-5 w-px bg-[var(--primary-color)]/20" />
-          <h1 className="font-[family-name:var(--font-playfair)] font-bold text-xl tracking-wide text-[var(--text-primary)]">Active Evaluation</h1>
-          <div className="h-5 w-px bg-[var(--primary-color)]/20 ml-4" />
+          <div className="h-5 w-px bg-[var(--primary-color)]/20 hidden sm:block" />
+          <h1 className="font-[family-name:var(--font-playfair)] font-bold text-base sm:text-xl tracking-wide text-[var(--text-primary)] truncate">Active Evaluation</h1>
           <button 
             onClick={handleNewSession}
-            className="flex items-center gap-2 text-sm font-semibold px-4 py-1.5 rounded-full bg-white border border-[var(--primary-color)]/20 text-[var(--text-secondary)] hover:text-[var(--primary-color)] hover:border-[var(--primary-color)] hover:shadow-md transition-all ml-2"
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 rounded-full bg-white border border-[var(--primary-color)]/20 text-[var(--text-secondary)] hover:text-[var(--primary-color)] hover:border-[var(--primary-color)] hover:shadow-md transition-all ml-auto sm:ml-2 shrink-0"
           >
-            <RotateCcw className="w-4 h-4" />
-            New Session
+            <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">New Session</span>
+            <span className="sm:hidden">Reset</span>
           </button>
         </div>
         
-        <div className="flex items-center gap-4">
+        {/* Row 2 (or right side on desktop): controls */}
+        <div className="flex items-center gap-2 sm:gap-4">
           {/* Language Selector */}
           <select 
             suppressHydrationWarning
             value={activeLanguage}
             onChange={(e) => setActiveLanguage(e.target.value)}
-            className="bg-white border border-[var(--primary-color)]/20 text-[var(--text-secondary)] text-sm font-semibold rounded-full px-4 py-2 outline-none focus:border-[var(--primary-color)] transition-colors shadow-sm cursor-pointer"
+            className="bg-white border border-[var(--primary-color)]/20 text-[var(--text-secondary)] text-xs sm:text-sm font-semibold rounded-full px-3 sm:px-4 py-1.5 sm:py-2 outline-none focus:border-[var(--primary-color)] transition-colors shadow-sm cursor-pointer flex-1 sm:flex-none"
           >
             {SUPPORTED_LANGUAGES.map(lang => (
               <option key={lang.code} value={lang.code}>{lang.name}</option>
@@ -561,17 +564,17 @@ export default function TrainingPage() {
           </select>
 
           {/* Character Selector */}
-          <div className="flex bg-white border border-[var(--primary-color)]/20 rounded-full overflow-hidden shadow-sm p-1">
+          <div className="flex bg-white border border-[var(--primary-color)]/20 rounded-full overflow-hidden shadow-sm p-0.5 sm:p-1 shrink-0">
             <button 
               suppressHydrationWarning
-              className={`px-6 py-1.5 text-sm font-bold rounded-full transition-all duration-300 ${activeCharacter === 'mahiru' ? 'bg-[var(--primary-color)] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[var(--primary-color)] hover:bg-[var(--primary-color)]/5'}`}
+              className={`px-3 sm:px-6 py-1 sm:py-1.5 text-xs sm:text-sm font-bold rounded-full transition-all duration-300 ${activeCharacter === 'mahiru' ? 'bg-[var(--primary-color)] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[var(--primary-color)] hover:bg-[var(--primary-color)]/5'}`}
               onClick={() => setActiveCharacter('mahiru')}
             >
               Mahiru
             </button>
             <button 
               suppressHydrationWarning
-              className={`px-6 py-1.5 text-sm font-bold rounded-full transition-all duration-300 ${activeCharacter === 'amane' ? 'bg-[#8CA899] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[#8CA899] hover:bg-[#8CA899]/5'}`}
+              className={`px-3 sm:px-6 py-1 sm:py-1.5 text-xs sm:text-sm font-bold rounded-full transition-all duration-300 ${activeCharacter === 'amane' ? 'bg-[#8CA899] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[#8CA899] hover:bg-[#8CA899]/5'}`}
               onClick={() => setActiveCharacter('amane')}
             >
               Amane
@@ -583,10 +586,10 @@ export default function TrainingPage() {
       <div className="flex-1 flex overflow-hidden relative z-10">
         
         {/* Main Interface */}
-        <div className="flex-1 flex flex-col items-center justify-end pb-12 px-4 relative z-10">
+        <div className="flex-1 flex flex-col items-center justify-end pb-6 sm:pb-12 px-3 sm:px-4 relative z-10">
           
-          {/* Character Display */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none opacity-90 drop-shadow-2xl w-full h-[75vh] flex justify-center items-center">
+          {/* Character Display — shorter on mobile to leave room for dialogue */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none opacity-90 drop-shadow-2xl w-full h-[55vh] sm:h-[75vh] flex justify-center items-center">
               <motion.div 
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ 
@@ -620,7 +623,7 @@ export default function TrainingPage() {
             initial={{ opacity: 0, y: 50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.6, type: "spring", bounce: 0.3 }}
-            className="w-full max-w-3xl bg-white/80 backdrop-blur-xl border border-[var(--primary-color)]/20 rounded-3xl shadow-[0_8px_30px_rgba(212,175,55,0.15)] relative z-10 overflow-visible"
+            className="w-full max-w-3xl bg-white/80 backdrop-blur-xl border border-[var(--primary-color)]/20 rounded-2xl sm:rounded-3xl shadow-[0_8px_30px_rgba(212,175,55,0.15)] relative z-10 overflow-visible"
           >
             {/* Floating Name Tag */}
             <div className={`absolute -top-5 left-8 px-6 py-1.5 rounded-full text-sm font-bold tracking-widest text-white shadow-md ${currentDialogue.role === "coach" ? (activeCharacter === "mahiru" ? 'bg-[var(--secondary-color)]' : 'bg-[var(--tertiary-color)]') : 'bg-[var(--text-secondary)]'}`}>
@@ -628,7 +631,7 @@ export default function TrainingPage() {
             </div>
             
             {/* Dialogue Text */}
-            <div className="p-8 pt-10 min-h-[140px] text-[1.1rem] leading-relaxed font-medium text-[var(--text-primary)]">
+            <div className="p-4 sm:p-8 pt-8 sm:pt-10 min-h-[100px] sm:min-h-[140px] text-base sm:text-[1.1rem] leading-relaxed font-medium text-[var(--text-primary)]">
               {currentDialogue.role === "coach" && currentDialogue.content !== "..." ? (
                 <TypewriterText 
                   key={messages.length}
@@ -677,8 +680,8 @@ export default function TrainingPage() {
           </motion.div>
         </div>
 
-        {/* Real-time Analyst Panel */}
-        <div className="w-80 border-l border-[var(--primary-color)]/10 bg-white/70 backdrop-blur-md flex flex-col relative z-10 shadow-[-4px_0_20px_rgba(212,175,55,0.05)]">
+        {/* Real-time Analyst Panel — sidebar on lg+, hidden on mobile (toggled via bottom sheet) */}
+        <div className="hidden lg:flex w-80 border-l border-[var(--primary-color)]/10 bg-white/70 backdrop-blur-md flex-col relative z-10 shadow-[-4px_0_20px_rgba(212,175,55,0.05)]">
           <div className="p-6 border-b border-[var(--primary-color)]/10 bg-gradient-to-b from-[var(--surface-low)]/50 to-transparent">
             <h2 className="text-lg font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)] tracking-wide">Live Analysis</h2>
             <p className="text-xs text-[var(--text-secondary)] font-medium mt-1">Evaluating communication clarity.</p>
@@ -734,6 +737,88 @@ export default function TrainingPage() {
           </div>
         </div>
       </div>
+
+      {/* ─────────── MOBILE: Floating Analyst Toggle Button ─────────── */}
+      <div className="lg:hidden fixed bottom-[92px] right-4 z-30">
+        <button
+          onClick={() => setShowAnalyst(v => !v)}
+          className="flex items-center gap-2 bg-[var(--primary-color)] text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-[0_4px_20px_rgba(212,175,55,0.5)] active:scale-95 transition-all"
+        >
+          <Activity className="w-4 h-4" />
+          {showAnalyst ? "Hide Stats" : "Live Stats"}
+          <ChevronUp className={`w-3.5 h-3.5 transition-transform ${showAnalyst ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
+
+      {/* ─────────── MOBILE: Analyst Bottom Sheet ─────────── */}
+      <AnimatePresence>
+        {showAnalyst && (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", stiffness: 300, damping: 35 }}
+            className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-[var(--primary-color)]/20 rounded-t-3xl shadow-[0_-8px_40px_rgba(212,175,55,0.15)] max-h-[70vh] overflow-y-auto"
+          >
+            {/* Handle & header */}
+            <div className="sticky top-0 bg-white/95 backdrop-blur-xl border-b border-[var(--primary-color)]/10 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)]">Live Analysis</h2>
+                <p className="text-xs text-[var(--text-secondary)]">Evaluating communication clarity.</p>
+              </div>
+              <button onClick={() => setShowAnalyst(false)} className="p-2 rounded-full bg-[var(--surface-low)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              <div className="bg-[var(--surface-low)] p-4 rounded-2xl border border-[var(--primary-color)]/10">
+                <div className="flex items-center gap-2 mb-2 text-[var(--primary-color)]">
+                  <Activity className="w-4 h-4" />
+                  <span className="text-xs font-bold uppercase tracking-widest">Passiveness</span>
+                </div>
+                <div className="text-3xl font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)]">
+                  {latestFeedback ? latestFeedback.passiveness_score : 0}<span className="text-[var(--text-secondary)] text-lg">/10</span>
+                </div>
+                {latestFeedback && latestFeedback.passiveness_score > 5 && (
+                  <div className="text-xs text-[#D98A94] mt-2 font-bold bg-[#D98A94]/10 px-3 py-1.5 rounded-md inline-block">Correction required</div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-[var(--surface-low)] p-4 rounded-2xl border border-[var(--primary-color)]/10">
+                  <div className="flex flex-col gap-1 mb-1 text-[var(--primary-color)]">
+                    <MessageSquareWarning className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Apologies</span>
+                  </div>
+                  <div className="text-2xl font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)]">
+                    {latestFeedback ? latestFeedback.apology_count : 0}
+                  </div>
+                </div>
+                <div className="bg-[var(--surface-low)] p-4 rounded-2xl border border-[var(--primary-color)]/10">
+                  <div className="flex flex-col gap-1 mb-1 text-[var(--primary-color)]">
+                    <PauseCircle className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">Hesitations</span>
+                  </div>
+                  <div className="text-2xl font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)]">
+                    {latestFeedback ? latestFeedback.hesitation_count : 0}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-bold uppercase tracking-widest text-[var(--primary-color)] mb-2 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--primary-color)]" />
+                  Coach Notes
+                </div>
+                <div className="text-sm text-[var(--text-secondary)] font-medium leading-relaxed p-4 bg-[var(--surface-low)] rounded-2xl border border-[var(--primary-color)]/10">
+                  {latestFeedback ? latestFeedback.feedback_notes : "Awaiting your first interaction..."}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

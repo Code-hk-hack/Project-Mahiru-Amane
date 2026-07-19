@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Playfair_Display, Quicksand } from "next/font/google";
 import "./globals.css";
 
@@ -15,6 +15,14 @@ const quicksand = Quicksand({
 export const metadata: Metadata = {
   title: "Aura AI - Active Evaluation",
   description: "Eliminate hesitation with angelic precision.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({

@@ -40,6 +40,22 @@ body {
                     url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiLz4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyMTIsIDE3NSwgNTUsIDAuMTUpIi8+Cjwvc3ZnPg==');
   background-size: 40px 40px;
   min-height: 100vh;
+  /* Mobile: prevent horizontal overflow */
+  overflow-x: hidden;
+  /* Support safe area insets for notched phones */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Mobile: improve tap experience on all interactive elements */
+button, a, input, select, textarea {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile: better momentum scrolling */
+.overflow-y-auto, .overflow-y-scroll {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Floating Light Particles Animation */

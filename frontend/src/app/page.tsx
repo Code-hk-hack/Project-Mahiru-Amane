@@ -57,7 +57,7 @@ export default function LandingPage() {
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 1, ease: "easeOut" }}
-        className="flex justify-between items-center w-full max-w-6xl px-8 py-8 z-10"
+        className="flex justify-between items-center w-full max-w-6xl px-5 sm:px-8 py-5 sm:py-8 z-10"
       >
         <motion.div 
           className="flex items-center gap-3 cursor-pointer"
@@ -75,9 +75,15 @@ export default function LandingPage() {
           />
           <div className="font-[family-name:var(--font-playfair)] font-bold text-xl tracking-wide">Aura AI</div>
         </motion.div>
-        <div className="flex gap-8 text-[var(--text-secondary)] font-medium">
+        {/* Desktop nav links */}
+        <div className="hidden sm:flex gap-8 text-[var(--text-secondary)] font-medium">
           <Link href="/dashboard" className="hover:text-[var(--primary-color)] transition-colors">Analytics</Link>
           <Link href="/training" className="hover:text-[var(--primary-color)] transition-colors">Start Session</Link>
+        </div>
+        {/* Mobile nav — compact pill buttons */}
+        <div className="flex sm:hidden gap-3">
+          <Link href="/dashboard" className="text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--primary-color)] transition-colors border border-[var(--primary-color)]/20 px-3 py-2 rounded-full">Analytics</Link>
+          <Link href="/training" className="text-xs font-bold bg-[var(--primary-color)] text-white px-3 py-2 rounded-full">Start</Link>
         </div>
       </motion.nav>
 
@@ -86,21 +92,21 @@ export default function LandingPage() {
         initial={{ y: 40, opacity: 0, filter: "blur(10px)" }}
         animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
         transition={{ delay: 0.2, duration: 1.2, ease: "easeOut" }}
-        className="mt-24 md:mt-32 flex flex-col items-center text-center max-w-4xl px-6 z-10"
+        className="mt-12 sm:mt-24 md:mt-32 flex flex-col items-center text-center max-w-4xl px-5 sm:px-6 z-10"
       >
 
-        <h1 className="text-5xl md:text-7xl font-[family-name:var(--font-playfair)] font-bold tracking-tight leading-[1.1] mb-8 text-[var(--text-primary)]">
+        <h1 className="text-4xl sm:text-5xl md:text-7xl font-[family-name:var(--font-playfair)] font-bold tracking-tight leading-[1.1] mb-6 sm:mb-8 text-[var(--text-primary)]">
           Find your <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--primary-color)] to-[var(--secondary-color)]">confidence.</span><br />
           Speak with clarity.
         </h1>
         
-        <p className="text-lg md:text-xl text-[var(--text-secondary)] leading-relaxed mb-12 max-w-2xl">
+        <p className="text-base sm:text-lg md:text-xl text-[var(--text-secondary)] leading-relaxed mb-8 sm:mb-12 max-w-2xl">
           Let Aura guide your words. Using strict evaluation rubrics wrapped in a warm, elegant interface, she will gently correct hesitation and passive language.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center">
           <Link href="/training" className="w-full sm:w-auto">
-            <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[var(--primary-color)] text-white px-8 py-4 rounded-full text-[15px] font-bold hover:bg-[#B5952F] hover:shadow-[0_4px_20px_rgba(212,175,55,0.4)] transition-all duration-300 transform hover:-translate-y-1">
+            <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[var(--primary-color)] text-white px-8 py-4 rounded-full text-[15px] font-bold hover:bg-[#B5952F] hover:shadow-[0_4px_20px_rgba(212,175,55,0.4)] active:scale-95 transition-all duration-300 min-h-[52px]">
               Continue Active Session
               <ArrowRight className="w-4 h-4" />
             </button>
@@ -112,15 +118,15 @@ export default function LandingPage() {
               localStorage.setItem('amane_session_id', crypto.randomUUID());
               window.location.href = '/training';
             }}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-white border border-[var(--primary-color)]/20 hover:border-[var(--primary-color)]/50 hover:bg-white/80 rounded-full transition-all duration-300 text-[15px] font-bold text-[var(--text-primary)] shadow-sm backdrop-blur-sm"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-white border border-[var(--primary-color)]/20 hover:border-[var(--primary-color)]/50 hover:bg-white/80 active:scale-95 rounded-full transition-all duration-300 text-[15px] font-bold text-[var(--text-primary)] shadow-sm backdrop-blur-sm min-h-[52px]"
           >
             <Sparkles className="w-4 h-4 text-[var(--primary-color)]" />
             Start New Session
           </button>
         </div>
 
-        <div className="mt-8">
-          <Link href="/dashboard" className="text-[var(--text-secondary)] hover:text-[var(--primary-color)] text-sm font-semibold transition-colors flex items-center gap-2">
+        <div className="mt-6 sm:mt-8">
+          <Link href="/dashboard" className="text-[var(--text-secondary)] hover:text-[var(--primary-color)] text-sm font-semibold transition-colors flex items-center gap-2 justify-center">
             View Progress Dashboard
             <ArrowRight className="w-4 h-4" />
           </Link>
@@ -128,7 +134,7 @@ export default function LandingPage() {
       </motion.main>
 
       {/* Features Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-32 max-w-6xl px-8 pb-32 w-full z-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-8 mt-16 sm:mt-32 max-w-6xl px-5 sm:px-8 pb-16 sm:pb-32 w-full z-10">
         {[
           { title: "Gentle Correction", desc: "Responses strictly grounded in professional communication guidelines, delivered with grace.", icon: <Heart className="w-6 h-6 text-[var(--primary-color)]" /> },
           { title: "Live Feedback", desc: "Real-time metrics on hesitation and passive language usage, completely integrated.", icon: <Star className="w-6 h-6 text-[var(--primary-color)]" /> },
@@ -140,9 +146,9 @@ export default function LandingPage() {
             animate={{ y: 0, opacity: 1, scale: 1 }}
             transition={{ delay: 0.6 + (i * 0.15), duration: 0.8, type: "spring", bounce: 0.4 }}
             whileHover={{ y: -10, scale: 1.02 }}
-            className="group relative bg-white border border-[var(--primary-color)]/10 rounded-3xl p-8 text-center shadow-sm hover:border-[var(--primary-color)]/40 hover:shadow-[0_20px_40px_rgba(212,175,55,0.15)] transition-all duration-300"
+            className="group relative bg-white border border-[var(--primary-color)]/10 rounded-3xl p-6 sm:p-8 text-center shadow-sm hover:border-[var(--primary-color)]/40 hover:shadow-[0_20px_40px_rgba(212,175,55,0.15)] transition-all duration-300"
           >
-            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-6 bg-[var(--surface-lowest)] border border-[var(--primary-color)]/20 group-hover:bg-[var(--primary-color)]/10 group-hover:scale-110 transition-all duration-300">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 bg-[var(--surface-lowest)] border border-[var(--primary-color)]/20 group-hover:bg-[var(--primary-color)]/10 group-hover:scale-110 transition-all duration-300">
               {feat.icon}
             </div>
             <h3 className="text-xl font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)] mb-3">{feat.title}</h3>

@@ -95,18 +95,18 @@ export default function DashboardPage() {
       <div className="w-full h-1 bg-gradient-to-r from-transparent via-[var(--primary-color)] to-transparent opacity-30" />
 
       {/* Navigation */}
-      <nav className="flex items-center justify-between px-8 py-6 border-b border-[var(--primary-color)]/10 bg-white/50 backdrop-blur-md z-10 relative">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="text-[var(--text-secondary)] hover:text-[var(--primary-color)] transition-colors flex items-center gap-2 text-sm font-semibold">
+      <nav className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-6 border-b border-[var(--primary-color)]/10 bg-white/50 backdrop-blur-md z-10 relative">
+        <div className="flex items-center gap-4 sm:gap-6 min-w-0">
+          <Link href="/" className="text-[var(--text-secondary)] hover:text-[var(--primary-color)] transition-colors flex items-center gap-2 text-sm font-semibold shrink-0">
             <ArrowLeft className="w-4 h-4" />
-            Return
+            <span className="hidden sm:inline">Return</span>
           </Link>
-          <div className="h-5 w-px bg-[var(--primary-color)]/20" />
-          <h1 className="font-[family-name:var(--font-playfair)] font-bold text-xl tracking-wide text-[var(--text-primary)]">Progress Analytics</h1>
+          <div className="h-5 w-px bg-[var(--primary-color)]/20 hidden sm:block" />
+          <h1 className="font-[family-name:var(--font-playfair)] font-bold text-lg sm:text-xl tracking-wide text-[var(--text-primary)] truncate">Progress Analytics</h1>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-3 shrink-0">
           <Link href="/training">
-            <button className="bg-[var(--primary-color)] text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-[#B5952F] hover:shadow-[0_4px_15px_rgba(212,175,55,0.3)] transition-all duration-300">
+            <button className="bg-[var(--primary-color)] text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold hover:bg-[#B5952F] hover:shadow-[0_4px_15px_rgba(212,175,55,0.3)] transition-all duration-300 min-h-[40px]">
               New Session
             </button>
           </Link>
@@ -114,7 +114,7 @@ export default function DashboardPage() {
       </nav>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-x-hidden overflow-y-auto p-8 md:p-12">
+      <div className="flex-1 overflow-x-hidden overflow-y-auto p-5 sm:p-8 md:p-12">
         <motion.div 
           variants={containerVariants}
           initial="hidden"
@@ -128,7 +128,7 @@ export default function DashboardPage() {
               <Loader2 className="w-8 h-8 text-[var(--primary-color)] animate-spin" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8">
               {[
                 { label: "Avg. Passiveness Score", value: metrics.passiveness, icon: <Activity className="w-5 h-5" />, trend: "Lower is better", positive: parseFloat(metrics.passiveness) < 4.0 },
                 { label: "Total Apologies", value: metrics.apologies.toString(), icon: <AlertCircle className="w-5 h-5" />, trend: "Across all sessions", positive: metrics.apologies < 5 },
@@ -154,18 +154,18 @@ export default function DashboardPage() {
           )}
 
           {/* Main Chart Area */}
-          <motion.div variants={itemVariants} className="bg-white border border-[var(--primary-color)]/10 rounded-3xl p-10 shadow-sm relative overflow-hidden">
+          <motion.div variants={itemVariants} className="bg-white border border-[var(--primary-color)]/10 rounded-3xl p-5 sm:p-10 shadow-sm relative overflow-hidden">
             {/* Subtle floral/angelic background watermark (optional) */}
             <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-[var(--primary-color)] opacity-5 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="flex justify-between items-end mb-12 relative z-10">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-8 sm:mb-12 relative z-10 gap-2">
               <div>
-                <h2 className="text-2xl font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)] mb-2">Confidence Score Timeline</h2>
-                <p className="text-sm text-[var(--text-secondary)]">A lower passiveness score reflects a stronger, clearer voice.</p>
+                <h2 className="text-xl sm:text-2xl font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)] mb-1 sm:mb-2">Confidence Score Timeline</h2>
+                <p className="text-xs sm:text-sm text-[var(--text-secondary)]">A lower passiveness score reflects a stronger, clearer voice.</p>
               </div>
             </div>
             
-            <div className="h-[280px] flex items-end gap-3 sm:gap-6 pb-6 border-b border-[var(--primary-color)]/20 relative z-10">
+            <div className="h-[200px] sm:h-[280px] flex items-end gap-1.5 sm:gap-6 pb-6 border-b border-[var(--primary-color)]/20 relative z-10">
               {[8, 7, 9, 6, 5, 5, 4, 3, 2, 3, 1, 2].map((val, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center justify-end h-full group relative">
                   {/* Tooltip on hover */}
@@ -181,10 +181,10 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-            <div className="flex justify-between mt-6 text-[var(--text-secondary)] text-xs font-bold tracking-wider uppercase relative z-10">
-              <span>Session 1</span>
-              <span>Session 6</span>
-              <span className="text-[var(--primary-color)]">Session 12 (Current)</span>
+            <div className="flex justify-between mt-4 sm:mt-6 text-[var(--text-secondary)] text-[10px] sm:text-xs font-bold tracking-wider uppercase relative z-10">
+              <span>S.1</span>
+              <span className="hidden sm:block">Session 6</span>
+              <span className="text-[var(--primary-color)]">Current</span>
             </div>
           </motion.div>
 
