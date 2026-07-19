@@ -152,7 +152,8 @@ export default function TrainingPage() {
 
     const fetchHistory = async () => {
       try {
-        const res = await fetch(`http://127.0.0.1:8000/chat/history?session_id=${storedSessionId}`);
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+        const res = await fetch(`${apiUrl}/chat/history?session_id=${storedSessionId}`);
         if (res.ok) {
           const data = await res.json();
           if (data.messages && data.messages.length > 0) {
@@ -221,7 +222,8 @@ export default function TrainingPage() {
       nextStartTimeRef.current = audioCtxRef.current.currentTime;
     }
     
-    const ws = new WebSocket(`ws://localhost:8000/ws/voice-chat?session_id=${sessionId}&character=${activeCharacter}&difficulty=hard&language=${activeLanguage}`);
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000";
+    const ws = new WebSocket(`${wsUrl}/ws/voice-chat?session_id=${sessionId}&character=${activeCharacter}&difficulty=hard&language=${activeLanguage}`);
     wsRef.current = ws;
     
     ws.onclose = () => {
