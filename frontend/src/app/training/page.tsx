@@ -612,6 +612,7 @@ export default function TrainingPage() {
                   src={`/${getSpriteFilename(activeCharacter, currentEmotion)}`} 
                   alt="Character"
                   fill 
+                  sizes="(max-width: 1024px) 100vw, 800px"
                   className="object-contain"
                   priority
                 />
