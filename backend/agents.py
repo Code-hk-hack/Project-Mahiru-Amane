@@ -45,7 +45,7 @@ class AlchemystWrapper:
             # Note: According to Alchemyst SDK docs, search returns a response object with matches or similar
             results = self.client.v1.context.search(
                 query=query,
-                similarity_threshold=0.6,
+                minimum_similarity_threshold=0.6,
                 scope="internal",
                 body_metadata={
                     "group_name": [user_id]
@@ -72,8 +72,10 @@ class AlchemystWrapper:
                     {
                         "content": messages,
                         "metadata": {
-                            "file_name": f"memory_{user_id}.txt",
-                            "file_type": "text/plain"
+                            "fileName": f"memory_{user_id}.txt",
+                            "fileSize": len(messages),
+                            "fileType": "text/plain",
+                            "lastModified": "2024-01-01T00:00:00Z"
                         }
                     }
                 ],
