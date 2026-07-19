@@ -3,14 +3,77 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Activity, TrendingUp, AlertCircle, ArrowLeft } from "lucide-react";
+import { Activity, TrendingUp, AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState({ passiveness: "0.0", apologies: 0, hesitations: 0 });
+  const router = useRouter();
   
   useEffect(() => {
     setMounted(true);
-  }, []);
+    
+    const fetchDashboardData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push("/auth");
+        return;
+      }
+
+      try {
+        // Fetch all sessions for this user
+        const { data: sessionsData } = await supabase
+          .from('sessions')
+          .select('id')
+          .eq('user_id', session.user.id);
+          
+        if (!sessionsData || sessionsData.length === 0) {
+          setLoading(false);
+          return;
+        }
+
+        const sessionIds = sessionsData.map(s => s.id);
+
+        // Fetch all messages for these sessions
+        const { data: messagesData } = await supabase
+          .from('messages')
+          .select('passiveness_score, apology_count, hesitation_count')
+          .in('session_id', sessionIds)
+          .not('passiveness_score', 'is', null);
+
+        if (messagesData && messagesData.length > 0) {
+          let totalPass = 0;
+          let totalApol = 0;
+          let totalHes = 0;
+          let validScores = 0;
+
+          messagesData.forEach(m => {
+            if (m.passiveness_score !== null) {
+              totalPass += m.passiveness_score;
+              validScores++;
+            }
+            totalApol += m.apology_count || 0;
+            totalHes += m.hesitation_count || 0;
+          });
+
+          setMetrics({
+            passiveness: validScores > 0 ? (totalPass / validScores).toFixed(1) : "0.0",
+            apologies: totalApol,
+            hesitations: totalHes
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [router]);
 
   const containerVariants: any = {
     hidden: { opacity: 0 },
@@ -60,29 +123,35 @@ export default function DashboardPage() {
         >
 
           {/* Top Metric Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { label: "Avg. Passiveness Score", value: "3.2", icon: <Activity className="w-5 h-5" />, trend: "-15% (Improving)", positive: true },
-              { label: "Total Apologies", value: "14", icon: <AlertCircle className="w-5 h-5" />, trend: "4 this week", positive: false },
-              { label: "Hesitation Markers", value: "89", icon: <TrendingUp className="w-5 h-5" />, trend: "Mostly 'I guess'", positive: false }
-            ].map((metric, idx) => (
-              <motion.div key={idx} variants={itemVariants} whileHover={{ y: -5, scale: 1.02 }} className="bg-white border border-[var(--primary-color)]/10 rounded-3xl p-8 shadow-sm hover:shadow-[0_8px_30px_rgba(212,175,55,0.08)] hover:border-[var(--primary-color)]/30 transition-all duration-300">
-                <div className="flex justify-between items-center mb-6 text-[var(--text-secondary)]">
-                  <div className="text-xs font-bold uppercase tracking-widest text-[var(--primary-color)]">
-                    {metric.label}
+          {loading ? (
+            <div className="flex justify-center items-center h-48">
+              <Loader2 className="w-8 h-8 text-[var(--primary-color)] animate-spin" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                { label: "Avg. Passiveness Score", value: metrics.passiveness, icon: <Activity className="w-5 h-5" />, trend: "Lower is better", positive: parseFloat(metrics.passiveness) < 4.0 },
+                { label: "Total Apologies", value: metrics.apologies.toString(), icon: <AlertCircle className="w-5 h-5" />, trend: "Across all sessions", positive: metrics.apologies < 5 },
+                { label: "Hesitation Markers", value: metrics.hesitations.toString(), icon: <TrendingUp className="w-5 h-5" />, trend: "Tracked in real-time", positive: metrics.hesitations < 10 }
+              ].map((metric, idx) => (
+                <motion.div key={idx} variants={itemVariants} whileHover={{ y: -5, scale: 1.02 }} className="bg-white border border-[var(--primary-color)]/10 rounded-3xl p-8 shadow-sm hover:shadow-[0_8px_30px_rgba(212,175,55,0.08)] hover:border-[var(--primary-color)]/30 transition-all duration-300">
+                  <div className="flex justify-between items-center mb-6 text-[var(--text-secondary)]">
+                    <div className="text-xs font-bold uppercase tracking-widest text-[var(--primary-color)]">
+                      {metric.label}
+                    </div>
+                    <div className="bg-[var(--surface-lowest)] p-2 rounded-full border border-[var(--primary-color)]/20 text-[var(--primary-color)]">{metric.icon}</div>
                   </div>
-                  <div className="bg-[var(--surface-lowest)] p-2 rounded-full border border-[var(--primary-color)]/20 text-[var(--primary-color)]">{metric.icon}</div>
-                </div>
-                
-                <div className="text-5xl font-bold font-[family-name:var(--font-playfair)] text-[var(--text-primary)] mb-3 tracking-tight">
-                  {metric.value}
-                </div>
-                <div className={`text-sm font-semibold ${metric.positive ? 'text-[#8DB596]' : 'text-[#D98A94]'}`}>
-                  {metric.trend}
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                  
+                  <div className="text-5xl font-bold font-[family-name:var(--font-playfair)] text-[var(--text-primary)] mb-3 tracking-tight">
+                    {metric.value}
+                  </div>
+                  <div className={`text-sm font-semibold ${metric.positive ? 'text-[#8DB596]' : 'text-[#D98A94]'}`}>
+                    {metric.trend}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
 
           {/* Main Chart Area */}
           <motion.div variants={itemVariants} className="bg-white border border-[var(--primary-color)]/10 rounded-3xl p-10 shadow-sm relative overflow-hidden">

@@ -140,26 +140,31 @@ class AnalystAgent:
 from mcp_client import get_mcp_session
 from database import get_db
 
-def ensure_session_exists(db, session_id: str):
+def ensure_session_exists(db, session_id: str, user_id: str = None):
     try:
         res = db.table('sessions').select('id').eq('id', session_id).execute()
         if not res.data:
-            user_res = db.table('users').insert({"username": f"user_{session_id[:8]}"}).execute()
-            if user_res.data:
-                user_id = user_res.data[0]['id']
-                db.table('sessions').insert({"id": session_id, "user_id": user_id, "session_title": "Chat"}).execute()
+            if not user_id:
+                user_res = db.table('users').insert({"username": f"user_{session_id[:8]}"}).execute()
+                if user_res.data:
+                    user_id = user_res.data[0]['id']
+            db.table('sessions').insert({"id": session_id, "user_id": user_id, "session_title": "Chat"}).execute()
     except Exception as e:
         print(f"Error ensuring session exists: {e}")
 
 class CoachAgent:
     @staticmethod
-    async def stream_respond(user_message: str, analyst_feedback: AnalystFeedback, difficulty: str = "neutral", session_id: str | None = None, character: str = "mahiru", language: str = "en-IN") -> AsyncGenerator[Dict[str, Any], None]:
+    async def stream_respond(user_message: str, analyst_feedback: AnalystFeedback, difficulty: str = "neutral", session_id: str | None = None, user_id: str | None = None, character: str = "mahiru", language: str = "en-IN") -> AsyncGenerator[Dict[str, Any], None]:
         """
         Generates the Mahiru/Amane response incorporating the analyst feedback using an async generator for near-0 latency SSE streaming.
         Uses Groq as primary, Gemini as fallback.
         """
         db = get_db()
         
+        # Ensure session exists in the database
+        if session_id:
+            ensure_session_exists(db, session_id, user_id)
+            
         # Determine language name for prompt
         lang_map = {
             "en-IN": "English",

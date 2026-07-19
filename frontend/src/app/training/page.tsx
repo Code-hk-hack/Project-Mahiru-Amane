@@ -205,7 +205,7 @@ export default function TrainingPage() {
     }
   }, [messages]);
 
-  const connectWebSocket = () => {
+  const connectWebSocket = async () => {
     // Always close any existing WS so each voice turn gets a fresh connection
     if (wsRef.current) {
       if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
@@ -222,8 +222,12 @@ export default function TrainingPage() {
       nextStartTimeRef.current = audioCtxRef.current.currentTime;
     }
     
+    const { supabase } = await import('@/lib/supabase');
+    const { data: { session } } = await supabase.auth.getSession();
+    const userIdParam = session ? `&user_id=${session.user.id}` : "";
+
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000";
-    const ws = new WebSocket(`${wsUrl}/ws/voice-chat?session_id=${sessionId}&character=${activeCharacter}&difficulty=hard&language=${activeLanguage}`);
+    const ws = new WebSocket(`${wsUrl}/ws/voice-chat?session_id=${sessionId}&character=${activeCharacter}&difficulty=hard&language=${activeLanguage}${userIdParam}`);
     wsRef.current = ws;
     
     ws.onclose = () => {
@@ -355,8 +359,6 @@ export default function TrainingPage() {
         }
       }
     };
-    
-    return ws;
   };
 
   const handleStartRecording = async () => {
@@ -375,7 +377,9 @@ export default function TrainingPage() {
       isRecordingRef.current = true;
       setIsLoading(true); // Prevent text sending while recording
       
-      const ws = connectWebSocket();
+      await connectWebSocket();
+      const ws = wsRef.current!;
+      
       // Wait for WS to open if not already
       if (ws.readyState !== WebSocket.OPEN) {
         await new Promise<void>((resolve, reject) => {
@@ -476,7 +480,8 @@ export default function TrainingPage() {
     setIsTyping(true);
 
     try {
-      const ws = connectWebSocket();
+      await connectWebSocket();
+      const ws = wsRef.current!;
       if (ws.readyState !== WebSocket.OPEN) {
         await new Promise<void>((resolve, reject) => {
           ws.addEventListener('open', () => resolve(), { once: true });
