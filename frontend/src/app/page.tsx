@@ -168,7 +168,7 @@ export default function LandingPage() {
                 boxShadow: ["0px 0px 0px rgba(212,175,55,0)", "0px 0px 150px rgba(212,175,55,1)", "0px 0px 80px rgba(212,175,55,0.6)"]
               }}
               exit={{ scale: 1.5, opacity: 0, filter: "blur(20px)" }}
-              transition={{ duration: 1.2, type: "spring", bounce: 0.5 }}
+              transition={{ duration: 1.2, ease: "easeInOut" }}
             />
           </motion.div>
         )}
