@@ -576,13 +576,25 @@ export default function TrainingPage() {
             <AnimatePresence mode="wait">
               <motion.img 
                 key={`${activeCharacter}-${currentEmotion}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ 
+                  opacity: 1, 
+                  y: [0, -15, 0],
+                  scale: isTyping ? [1, 1.02, 1] : 1,
+                  filter: isTyping 
+                    ? ["drop-shadow(0px 0px 0px rgba(212,175,55,0))", "drop-shadow(0px 0px 30px rgba(212,175,55,0.8))", "drop-shadow(0px 0px 0px rgba(212,175,55,0))"]
+                    : "drop-shadow(0px 0px 0px rgba(212,175,55,0))"
+                }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ 
+                  opacity: { duration: 0.6, ease: "easeOut" },
+                  y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                  scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                  filter: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                }}
                 src={`/${getSpriteFilename(activeCharacter, currentEmotion)}`} 
                 alt="Character" 
-                className="max-h-[75vh] object-contain"
+                className="max-h-[75vh] object-contain transition-all duration-500"
                 onError={(e) => {
                   const fallback = activeCharacter === "mahiru" ? "mahiru_waiting.png" : "amane_happy.png";
                   if (!e.currentTarget.src.includes(fallback)) {
@@ -596,8 +608,12 @@ export default function TrainingPage() {
           </div>
 
           {/* Dialogue Box */}
-          <div className="w-full max-w-3xl bg-white/80 backdrop-blur-xl border border-[var(--primary-color)]/20 rounded-3xl shadow-[0_8px_30px_rgba(212,175,55,0.15)] relative z-10 overflow-visible">
-            
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.6, type: "spring", bounce: 0.3 }}
+            className="w-full max-w-3xl bg-white/80 backdrop-blur-xl border border-[var(--primary-color)]/20 rounded-3xl shadow-[0_8px_30px_rgba(212,175,55,0.15)] relative z-10 overflow-visible"
+          >
             {/* Floating Name Tag */}
             <div className={`absolute -top-5 left-8 px-6 py-1.5 rounded-full text-sm font-bold tracking-widest text-white shadow-md ${currentDialogue.role === "coach" ? (activeCharacter === "mahiru" ? 'bg-[var(--secondary-color)]' : 'bg-[var(--tertiary-color)]') : 'bg-[var(--text-secondary)]'}`}>
               {currentDialogue.role === "coach" ? (activeCharacter === "mahiru" ? "MAHIRU" : "AMANE") : "YOU"}
@@ -650,8 +666,7 @@ export default function TrainingPage() {
                 </button>
               </div>
             </div>
-          </div>
-          
+          </motion.div>
         </div>
 
         {/* Real-time Analyst Panel */}

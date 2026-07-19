@@ -66,7 +66,7 @@ export default function DashboardPage() {
               { label: "Total Apologies", value: "14", icon: <AlertCircle className="w-5 h-5" />, trend: "4 this week", positive: false },
               { label: "Hesitation Markers", value: "89", icon: <TrendingUp className="w-5 h-5" />, trend: "Mostly 'I guess'", positive: false }
             ].map((metric, idx) => (
-              <motion.div key={idx} variants={itemVariants} className="bg-white border border-[var(--primary-color)]/10 rounded-3xl p-8 shadow-sm hover:shadow-[0_8px_30px_rgba(212,175,55,0.08)] hover:border-[var(--primary-color)]/30 transition-all duration-500">
+              <motion.div key={idx} variants={itemVariants} whileHover={{ y: -5, scale: 1.02 }} className="bg-white border border-[var(--primary-color)]/10 rounded-3xl p-8 shadow-sm hover:shadow-[0_8px_30px_rgba(212,175,55,0.08)] hover:border-[var(--primary-color)]/30 transition-all duration-300">
                 <div className="flex justify-between items-center mb-6 text-[var(--text-secondary)]">
                   <div className="text-xs font-bold uppercase tracking-widest text-[var(--primary-color)]">
                     {metric.label}

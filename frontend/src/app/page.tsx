@@ -79,9 +79,9 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <motion.main 
-        initial={{ y: 30, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.3, duration: 1.2, ease: "easeOut" }}
+        initial={{ y: 40, opacity: 0, filter: "blur(10px)" }}
+        animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+        transition={{ delay: 0.2, duration: 1.2, ease: "easeOut" }}
         className="mt-24 md:mt-32 flex flex-col items-center text-center max-w-4xl px-6 z-10"
       >
 
@@ -132,12 +132,13 @@ export default function LandingPage() {
         ].map((feat, i) => (
           <motion.div 
             key={i}
-            initial={{ y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.6 + (i * 0.2), duration: 0.8 }}
-            className="group relative bg-white border border-[var(--primary-color)]/10 rounded-3xl p-8 text-center hover:border-[var(--primary-color)]/30 hover:shadow-[0_8px_30px_rgba(212,175,55,0.1)] transition-all duration-500"
+            initial={{ y: 40, opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            transition={{ delay: 0.6 + (i * 0.15), duration: 0.8, type: "spring", bounce: 0.4 }}
+            whileHover={{ y: -10, scale: 1.02 }}
+            className="group relative bg-white border border-[var(--primary-color)]/10 rounded-3xl p-8 text-center shadow-sm hover:border-[var(--primary-color)]/40 hover:shadow-[0_20px_40px_rgba(212,175,55,0.15)] transition-all duration-300"
           >
-            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-6 bg-[var(--surface-lowest)] border border-[var(--primary-color)]/20 group-hover:scale-110 transition-transform duration-500">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-6 bg-[var(--surface-lowest)] border border-[var(--primary-color)]/20 group-hover:bg-[var(--primary-color)]/10 group-hover:scale-110 transition-all duration-300">
               {feat.icon}
             </div>
             <h3 className="text-xl font-[family-name:var(--font-playfair)] font-bold text-[var(--text-primary)] mb-3">{feat.title}</h3>
