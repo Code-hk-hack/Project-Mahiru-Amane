@@ -588,8 +588,8 @@ export default function TrainingPage() {
         {/* Main Interface */}
         <div className="flex-1 flex flex-col items-center justify-end pb-6 sm:pb-12 px-3 sm:px-4 relative z-10">
           
-          {/* Character Display — shorter on mobile to leave room for dialogue */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none opacity-90 drop-shadow-2xl w-full h-[55vh] sm:h-[75vh] flex justify-center items-center">
+          {/* Character Display — natural aspect ratio, centered */}
+          <div className="absolute top-0 left-0 right-0 bottom-0 z-0 pointer-events-none flex justify-center items-end overflow-hidden">
               <motion.div 
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ 
@@ -606,14 +606,15 @@ export default function TrainingPage() {
                   scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
                   filter: { duration: 2, repeat: Infinity, ease: "easeInOut" }
                 }}
-                className="relative w-full h-full max-w-[800px] transition-all duration-500"
+                className="transition-all duration-500 opacity-90 drop-shadow-2xl"
               >
                 <Image
                   src={`/${getSpriteFilename(activeCharacter, currentEmotion)}`} 
                   alt="Character"
-                  fill 
-                  sizes="(max-width: 1024px) 100vw, 800px"
-                  className="object-contain"
+                  width={420}
+                  height={680}
+                  sizes="(max-width: 640px) 280px, 420px"
+                  className="object-contain w-[220px] sm:w-[320px] lg:w-[420px] h-auto"
                   priority
                 />
               </motion.div>
