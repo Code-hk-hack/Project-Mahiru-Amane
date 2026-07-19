@@ -579,9 +579,7 @@ export default function TrainingPage() {
           
           {/* Character Display */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none opacity-90 drop-shadow-2xl">
-            <AnimatePresence mode="wait">
               <motion.img 
-                key={`${activeCharacter}-${currentEmotion}`}
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ 
                   opacity: 1, 
@@ -591,7 +589,6 @@ export default function TrainingPage() {
                     ? ["drop-shadow(0px 0px 0px rgba(212,175,55,0))", "drop-shadow(0px 0px 30px rgba(212,175,55,0.8))", "drop-shadow(0px 0px 0px rgba(212,175,55,0))"]
                     : ["drop-shadow(0px 0px 0px rgba(212,175,55,0))", "drop-shadow(0px 0px 0px rgba(212,175,55,0))", "drop-shadow(0px 0px 0px rgba(212,175,55,0))"]
                 }}
-                exit={{ opacity: 0, y: -10, scale: 0.95 }}
                 transition={{ 
                   opacity: { duration: 0.6, ease: "easeOut" },
                   y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
@@ -608,7 +605,6 @@ export default function TrainingPage() {
                   }
                 }}  
               />
-            </AnimatePresence>
           </div>
 
           {/* Dialogue Box */}
