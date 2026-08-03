@@ -46,6 +46,7 @@ class AlchemystWrapper:
             results = self.client.v1.context.search(
                 query=query,
                 minimum_similarity_threshold=0.6,
+                similarity_threshold=0.6,
                 scope="internal",
                 body_metadata={
                     "group_name": [user_id]
@@ -58,6 +59,8 @@ class AlchemystWrapper:
                 return [doc.get("content", str(doc)) if isinstance(doc, dict) else getattr(doc, 'content', str(doc)) for doc in results]
             elif hasattr(results, 'matches'):
                 return [getattr(doc, 'content', str(doc)) for doc in results.matches]
+            elif hasattr(results, 'contexts'):
+                return [getattr(doc, 'content', str(doc)) for doc in results.contexts]
             return [str(results)] # Fallback
         except Exception as e:
             print(f"Alchemyst search error: {e}")
@@ -70,19 +73,17 @@ class AlchemystWrapper:
             self.client.v1.context.add(
                 documents=[
                     {
-                        "content": messages,
-                        "metadata": {
-                            "fileName": f"memory_{user_id}.txt",
-                            "fileSize": len(messages),
-                            "fileType": "text/plain",
-                            "lastModified": "2024-01-01T00:00:00Z"
-                        }
+                        "content": messages
                     }
                 ],
                 source="hackathon_simulator",
                 context_type="conversation",
                 scope="internal",
                 metadata={
+                    "fileName": f"memory_{user_id}.txt",
+                    "fileSize": len(messages),
+                    "fileType": "text/plain",
+                    "lastModified": "2024-01-01T00:00:00Z",
                     "group_name": [user_id]
                 }
             )
