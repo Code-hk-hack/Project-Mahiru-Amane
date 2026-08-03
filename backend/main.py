@@ -72,7 +72,14 @@ async def chat_endpoint(request: ChatRequest):
         
         # Then yield the streamed coach response
         try:
-            async for item in CoachAgent.stream_respond(request.message, feedback, request.difficulty, request.session_id, request.character, request.language):
+            async for item in CoachAgent.stream_respond(
+                user_message=request.message,
+                analyst_feedback=feedback,
+                difficulty=request.difficulty,
+                session_id=request.session_id,
+                character=request.character,
+                language=request.language
+            ):
                 yield f"data: {json.dumps(item)}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
@@ -160,9 +167,9 @@ async def websocket_voice_chat(
                     async for audio_chunk in voice_manager.synthesize_text_stream(text_generator(), character=character, language=language):
                         await websocket.send_bytes(audio_chunk)
                 else:
-                    # Consume the generator to trigger LLM SSE streaming for text chat
-                    async for _ in text_generator():
-                        pass
+                    # If it's text input, still synthesize so the AI speaks back
+                    async for audio_chunk in voice_manager.synthesize_text_stream(text_generator(), character=character, language=language):
+                        await websocket.send_bytes(audio_chunk)
 
             except Exception as e:
                 print(f"Error during turn: {e}")
