@@ -23,17 +23,17 @@ def test():
         client.v1.context.add(
             documents=[
                 {
-                    "content": "User test memory for verification.",
-                    "metadata": {
-                        "file_name": "test_memory.txt",
-                        "file_type": "text/plain"
-                    }
+                    "content": "User test memory for verification."
                 }
             ],
             source="test_script",
             context_type="conversation",
             scope="internal",
             metadata={
+                "file_name": "test_memory.txt",
+                "file_type": "text/plain",
+                "file_size": 100,
+                "last_modified": "2023-10-01T00:00:00Z",
                 "group_name": ["hackathon_test_user"]
             }
         )

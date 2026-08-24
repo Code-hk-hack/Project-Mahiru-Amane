@@ -1,5 +1,7 @@
 # Aura AI 🌸
 
+**Repository URL:** [https://github.com/Code-hk-hack/Project-Mahiru-Amane](https://github.com/Code-hk-hack/Project-Mahiru-Amane)
+
 **Aura AI** is an AI-driven soft-skills and social confidence coaching simulator, presented through a highly interactive Anime Visual Novel aesthetic. It serves as a zero-latency digital training ground to help users build conversational "muscle memory" without the psychological traps of traditional AI companions.
 
 ## Core Philosophy: The "No-Escapism" Mandate 🚫
