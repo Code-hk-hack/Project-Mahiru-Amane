@@ -109,7 +109,7 @@ class AnalystAgent:
         # Initialize Gemini for lightning-fast structured output
         gemini_api_key = os.environ.get("GEMINI_API_KEY")
         primary_llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash", 
+            model="gemini-3.6-flash", 
             google_api_key=gemini_api_key,
             temperature=0.1
         )
@@ -245,7 +245,7 @@ FINAL WARNING: You MUST translate and output your entire response ONLY in {lang_
         
         # Primary LLM: Gemini 1.5 Flash (Groq models lacked tool calling support on this API key tier)
         primary_llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
+            model="gemini-3.6-flash",
             google_api_key=gemini_api_key,
             temperature=0.7
         )
