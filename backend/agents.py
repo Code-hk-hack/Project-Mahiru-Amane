@@ -106,25 +106,16 @@ class AnalystAgent:
             except Exception:
                 _hr_knowledge_cache = "{}"
 
-        # Initialize Groq for lightning-fast structured output
-        from pydantic import SecretStr
-        groq_api_key = os.environ.get("GROQ_API_KEY")
-        primary_llm = ChatGroq(
-            model="groq/compound-mini",
-            api_key=SecretStr(groq_api_key) if groq_api_key is not None else None,
-            temperature=0.1
-        )
-        
-        # Fallback to Gemini if Groq rate limits
+        # Initialize Gemini for lightning-fast structured output
         gemini_api_key = os.environ.get("GEMINI_API_KEY")
-        fallback_llm = ChatGoogleGenerativeAI(
+        primary_llm = ChatGoogleGenerativeAI(
             model="gemini-1.5-flash", 
             google_api_key=gemini_api_key,
             temperature=0.1
         )
         
-        # Langchain fallback logic for structured output
-        llm = primary_llm.with_fallbacks([fallback_llm])
+        # Langchain fallback logic for structured output (no fallback needed if Gemini is primary, but we'll keep the variable for consistency)
+        llm = primary_llm
         structured_llm = llm.with_structured_output(AnalystFeedback)
 
         system_prompt = (
@@ -250,26 +241,17 @@ FINAL WARNING: You MUST translate and output your entire response ONLY in {lang_
 
         messages.append(HumanMessage(content=f"[System Reminder: The user is speaking {lang_name}. You MUST reply ONLY in {lang_name} script.]\n\nUser: {user_message}"))
 
-        groq_api_key = os.environ.get("GROQ_API_KEY")
         gemini_api_key = os.environ.get("GEMINI_API_KEY")
         
-        from pydantic import SecretStr
-        # Primary LLM: Groq with 70b-versatile
-        primary_llm = ChatGroq(
-            model="groq/compound-mini",
-            api_key=SecretStr(groq_api_key) if groq_api_key is not None else None,
-            temperature=0.7
-        )
-        
-        # Fallback LLM: Gemini 1.5 Flash
-        fallback_llm = ChatGoogleGenerativeAI(
+        # Primary LLM: Gemini 1.5 Flash (Groq models lacked tool calling support on this API key tier)
+        primary_llm = ChatGoogleGenerativeAI(
             model="gemini-1.5-flash",
             google_api_key=gemini_api_key,
             temperature=0.7
         )
         
         # LangChain fallback logic
-        llm = primary_llm.with_fallbacks([fallback_llm])
+        llm = primary_llm
 
         # Cache MCP tools globally to avoid 1-2s latency per request
         global _mcp_raw_tools_cache
@@ -297,8 +279,7 @@ FINAL WARNING: You MUST translate and output your entire response ONLY in {lang_
         # If we need tools, we'd bind them. We will bind them to both models.
         if raw_tools:
             primary_llm = primary_llm.bind_tools(raw_tools)
-            fallback_llm = fallback_llm.bind_tools(raw_tools)
-            llm = primary_llm.with_fallbacks([fallback_llm])
+            llm = primary_llm
             
         full_response_text = ""
         emotion = default_emotion
