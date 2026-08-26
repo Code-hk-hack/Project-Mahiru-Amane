@@ -110,7 +110,7 @@ class AnalystAgent:
         from pydantic import SecretStr
         groq_api_key = os.environ.get("GROQ_API_KEY")
         primary_llm = ChatGroq(
-            model="llama3-8b-8192",
+            model="groq/compound-mini",
             api_key=SecretStr(groq_api_key) if groq_api_key is not None else None,
             temperature=0.1
         )
@@ -256,7 +256,7 @@ FINAL WARNING: You MUST translate and output your entire response ONLY in {lang_
         from pydantic import SecretStr
         # Primary LLM: Groq with 70b-versatile
         primary_llm = ChatGroq(
-            model="llama3-8b-8192",
+            model="groq/compound-mini",
             api_key=SecretStr(groq_api_key) if groq_api_key is not None else None,
             temperature=0.7
         )
